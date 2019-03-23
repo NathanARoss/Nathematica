@@ -1,24 +1,26 @@
 <!DOCTYPE html>
 <html lang=en-US>
-	<head>
-		<title>Nathematica</title>
-		<meta charset="UTF-8">
-		<meta name="viewport" content="width=device-width, initial-scale=1.0">
-		<link rel="stylesheet" type="text/css" href="main.css">
-		<script type="module" src="main.mjs"></script>
-	</head>
-	
-	<body>
-        <form id="query-bar">
-            <input type="text" name="query" placeholder="x^2 + 2x + 1 = 0"/>
-            <input type="submit" value="Submit"/>
-        </form>
 
-        <fieldset>
-            <legend>Input Interpretation</legend>
-            <div id="input-interpretation">
-                <span>x</span><span class="superscript">2</span>
-            </div>
-        </fieldset>
-	</body>
+<head>
+    <title>Nathematica</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" type="text/css" href="main.css">
+    <script type="module" src="main.mjs"></script>
+</head>
+
+<body>
+    <form id="query-bar">
+        <input type="text" name="query" placeholder="x^2 + 2x + 1 = 0" />
+        <input type="submit" value="Submit" />
+    </form>
+
+    <fieldset>
+        <legend>Input Interpretation</legend>
+        <div id="input-interpretation">
+            x<span class="superscript">2</span> + 2x + 1 = 0
+        </div>
+    </fieldset>
+</body>
+
 </html>
