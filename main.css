@@ -57,3 +57,8 @@ fieldset {
 .ratio > span:nth-child(1) {
     border-bottom: solid black thin;
 }
+
+canvas {
+    width: 100%;
+    position: relative;
+}

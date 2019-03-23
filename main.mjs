@@ -1,4 +1,5 @@
 import * as ItemTypes from "./item-types.mjs";
+import { } from "./2d-graph.mjs";
 
 const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
@@ -19,20 +20,23 @@ queryForm.addEventListener("submit", function (event) {
 
     solutionSteps.innerHTML = "";
 
-    let notFinished = true;
-    for (let i = 0; notFinished && i < 10; ++i) {
-        notFinished = ast.simplify();
+    const fakeNode = new ItemTypes.ASTNode(null, ast, null);
+
+    let keepGoing = true;
+    for (let i = 0; keepGoing && i < 10; ++i) {
         const step = document.createElement("div");
-        step.innerHTML = ast.toHTML();
+        step.innerHTML = fakeNode.left.toHTML();
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
+
+        keepGoing = fakeNode.left.simplify(fakeNode, false);
     }
 
     return false;
 });
 
 function getAST(expressionString) {
-    const tokens = expressionString.match(/\d+|cos|sin|tan|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
+    const tokens = expressionString.match(/\d+[.]?\d*|\d*[.]?\d+|cos|sin|tan|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
 
     if (!tokens || tokens.length === 0) {
         return false;
@@ -60,7 +64,14 @@ function getAST(expressionString) {
     //this is its own function so I can manually insert implicit multiplications
     function handleOperator(op) {
         //manage operator precendence
-        const item = new ItemTypes.BinaryOperator(op);
+        let item;
+
+        if (op === '/') {
+            item = new ItemTypes.Ratio()
+        } else {
+            item = new ItemTypes.BinaryOperator(op)
+        }
+
         while (
             opStack.length > 0 && peekOpStack() instanceof ItemTypes.BinaryOperator &&
             (
@@ -114,7 +125,7 @@ function getAST(expressionString) {
             if (opStack.length > 0 && peekOpStack() instanceof ItemTypes.Function) {
                 addNode(opStack.pop());
             } else if (expression.length > opStack.length + 1) {
-                console.log("I think there is a function-style multiplication going on here.", expression, opStack);
+                // console.log("I think there is a function-style multiplication going on here.", expression, opStack);
                 //catch use cases like y = 2(x(y)) meaning 2*x*y
                 handleOperator('*');
             }

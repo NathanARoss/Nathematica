@@ -1,4 +1,4 @@
-class ASTNode {
+export class ASTNode {
     constructor(value, left, right) {
         this.value = value;
         this.left = left;
@@ -26,6 +26,26 @@ export class Number extends ASTNode {
     toHTML() {
         return String(this.value);
     }
+
+    multiply(factor) {
+        if (factor instanceof Number) {
+            this.value *= factor.value;
+            return this;
+        } else if (this.value === 1) {
+            return factor;
+        } else {
+            return new BinaryOperator('*', factor, this);
+        }
+    }
+
+    divide(factor) {
+        if (factor instanceof Number) {
+            this.value /= factor.value;
+            return this;
+        } else {
+            return new Ratio(this, factor);
+        }
+    }
 }
 
 export class Variable extends ASTNode {
@@ -35,6 +55,20 @@ export class Variable extends ASTNode {
 
     toHTML() {
         return String(this.value);
+    }
+
+    multiply(factor) {
+        if (factor instanceof Variable && this.value === factor.value) {
+            return new BinaryOperator('^', this, new Number('2'));
+        } if (factor instanceof Number && factor.value === 1) {
+            return this;
+        } else {
+            return new BinaryOperator('*', factor, this);
+        }
+    }
+
+    divide(factor) {
+        return new Ratio(this, factor);
     }
 }
 
@@ -69,7 +103,6 @@ export class BinaryOperator extends ASTNode {
         var precedence = {
             "^": 4,
             "*": 3,
-            "/": 3,
             "+": 2,
             "-": 2,
             "=": 0,
@@ -79,36 +112,35 @@ export class BinaryOperator extends ASTNode {
     }
 
     toHTML() {
-        console.assert(this.left && this.right, this);
+        console.assert(this.left.toHTML && this.right.toHTML, this);
+
+        let leftSubExpression = this.left.toHTML();
+        if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
+            leftSubExpression = "(" + leftSubExpression + ")";
+        }
+
+        let rightSubExpression = this.right.toHTML();
+        if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
+            rightSubExpression = "(" + rightSubExpression + ")";
+        }
 
         if (this.value === '^') {
-            return this.left.toHTML() + "<span class='superscript'>" + this.right.toHTML() + "</span>";
-        } if (this.value === '/') {
-            return "<div class='ratio'><span>" + this.left.toHTML() + "</span><span>" + this.right.toHTML() + "</span></div>";
+            return leftSubExpression + "<span class='superscript'>" + rightSubExpression + "</span>";
         } else {
             let separator = ' ' + this.value + ' ';
 
-            if (this.value === "*" && !(this.left instanceof Number && this.right instanceof Number)) {
-                separator = '';
-
+            if (this.value === "*") {
                 let rightNeighbor = this.right;
                 while (rightNeighbor) {
-                    if (rightNeighbor instanceof Function) {
+                    if (rightNeighbor instanceof Variable) {
+                        separator = '';
+                        break;
+                    } else if (rightNeighbor instanceof Function) {
                         separator = ' ';
                         break;
                     }
                     rightNeighbor = rightNeighbor.left;
                 }
-            }
-
-            let leftSubExpression = this.left.toHTML();
-            if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
-                leftSubExpression = "(" + leftSubExpression + ")";
-            }
-
-            let rightSubExpression = this.right.toHTML();
-            if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
-                rightSubExpression = "(" + rightSubExpression + ")";
             }
 
             return leftSubExpression + separator + rightSubExpression;
@@ -118,35 +150,15 @@ export class BinaryOperator extends ASTNode {
     simplify(parent, isRight) {
         let simplified = this.left.simplify(this, false);
 
-        if (simplified) {
-            console.log("left side", this.left, "was simplfied")
+        if (!simplified) {
+            simplified = this.right.simplify(this, true);
         }
 
         if (!simplified) {
-            simplified = this.right.simplify(this, true);
+            const left = this.left.value;
+            const right = this.right.value;
 
-            if (simplified) {
-                console.log("right side", this.right, "was simplfied")
-            }
-        }
-
-        console.log("got here")
-        if (!simplified && parent) {
-            console.log("got here")
             if (this.left instanceof Number && this.right instanceof Number) {
-                console.log("got here")
-                const left = this.left.value;
-                const right = this.right.value;
-
-                /**
-                    "^": 4,
-                    "*": 3,
-                    "/": 3,
-                    "+": 2,
-                    "-": 2,
-                    "=": 0,
-                 */
-
                 let result = 0;
                 switch (this.value) {
                     case '+':
@@ -158,26 +170,163 @@ export class BinaryOperator extends ASTNode {
                     case '*':
                         result = left * right;
                         break;
-                    case '/':
-                        result = left / right;
-                        break;
                     case '^':
                         result = Math.pow(left, right);
                         break;
                 }
 
                 const newNode = new Number(result);
+
                 if (isRight) {
                     parent.right = newNode;
                 } else {
                     parent.left = newNode;
                 }
 
-                simplified = true;
+                return true;
+            } else {
+                //distribute across expressions when simplifying numbers isn't possible
+                if (this.value === '*') {
+                    // console.log(this.value, this.left, this.right);
+                    if (
+                        !(this.left instanceof Number) && (this.right instanceof Number) ||
+                        this.left instanceof Variable && this.right instanceof Variable ||
+                        (this.left instanceof BinaryOperator && this.left.value !== '*')
+                        || (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
+                        this.left = this.left.multiply(this.right);
+
+                        if (isRight) {
+                            parent.right = this.left;
+                        } else {
+                            parent.left = this.left;
+                        }
+
+                        return true;
+                    }
+
+                }
             }
         }
 
         return simplified;
+    }
+
+    multiply(factor) {
+        if (factor instanceof Number && factor.value === 1) {
+            return this;
+        }
+
+        switch (this.value) {
+            case '+':
+            case '-':
+                this.left = this.left.multiply(factor);
+                this.right = this.right.multiply(factor);
+                break;
+            case '*':
+                this.left = this.left.multiply(factor);
+                break;
+            case '^':
+                if (this.left instanceof Variable && factor instanceof Variable && this.left.value === factor.value) {
+                    this.right = new BinaryOperator('+', this.right, new Number('1'));
+                } else {
+                    return new BinaryOperator('*', factor, this);
+                }
+        }
+
+        return this;
+    }
+
+    divide(factor) {
+        switch (this.value) {
+            case '+':
+            case '-':
+                this.left = new Ratio(this.left, factor);
+                this.right = new Ratio(this.right, factor);
+                break;
+            case '*':
+                this.left = new Ratio(this.left, factor);
+                break;
+            case '^':
+                return new Ratio(this, factor);
+        }
+
+        return this;
+    }
+}
+
+export class Ratio extends BinaryOperator {
+    constructor(left, right) {
+        super('/', left, right);
+    }
+
+    precedence() {
+        return 3;
+    }
+
+    toHTML() {
+        return "<div class='ratio'><span>" + this.left.toHTML() + "</span><span>" + this.right.toHTML() + "</span></div>";
+    }
+
+    simplify(parent, isRight) {
+        let simplified = this.left.simplify(this, false);
+
+        if (!simplified) {
+            simplified = this.right.simplify(this, true);
+        }
+
+        if (!simplified) {
+            if (this.left instanceof Number && this.right instanceof Number) {
+                let newNode;
+
+                const left = this.left.value;
+                const right = this.right.value;
+
+                if (right === 1) {
+                    newNode = new Number(left);
+                } else if (left === Math.floor(left) && right === Math.floor(right)) {
+                    const gdc = getGCD(this.left.value, this.right.value);
+                    if (gdc > 1) {
+                        newNode = new BinaryOperator('/', new Number(left / gdc), new Number(right / gdc));
+                    } else {
+                        return false;
+                    }
+                } else {
+                    return false;
+                }
+
+                if (isRight) {
+                    parent.right = newNode;
+                } else {
+                    parent.left = newNode;
+                }
+
+                return true;
+            }
+        }
+
+        return simplified;
+    }
+
+    multiply(factor) {
+        if (factor instanceof Number && factor.value === 1) {
+            return this;
+        }
+        this.left = this.left.multiply(factor);
+    }
+
+    divide(factor) {
+        this.right = this.right.multiply(factor);
+    }
+
+    multiplyAgainstRatio(ratio) {
+        this.left = this.left.multiply(ratio.left);
+        this.right = this.right.multiply(ratio.right);
+    }
+
+    reciprocal() {
+        const temp = this.left;
+        this.left = this.right;
+        this.right = temp;
     }
 }
 
@@ -185,4 +334,17 @@ export class Parenthesis extends ASTNode {
     constructor(name) {
         super(name);
     }
+}
+
+function getGCD(x, y) {
+    x = Math.abs(x);
+    y = Math.abs(y);
+
+    while (y) {
+        const t = y;
+        y = x % y;
+        x = t;
+    }
+
+    return x;
 }
