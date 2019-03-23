@@ -19,13 +19,17 @@ queryForm.addEventListener("submit", function (event) {
     const out = ast.getHTML();
     inputInterpretation.innerHTML = out;
 
-    let glslExpression = ast.getGLSL();
-    if (!glslExpression.includes("=")) {
-        glslExpression = "y = " + glslExpression;
-    }
+    try {
+        let glslExpression = ast.getGLSL();
+        if (!glslExpression.includes("=")) {
+            glslExpression = "y = " + glslExpression;
+        }
 
-    // drawGraph("y = pow(x, 2.0) + 1.0");
-    drawGraph(glslExpression);
+        // drawGraph("y = pow(x, 2.0) + 1.0");
+        drawGraph(glslExpression);
+    } catch (e) {
+        console.error(e);
+    }
 
     solutionSteps.innerHTML = "";
 
