@@ -9,7 +9,11 @@ export class ASTNode {
 
     }
 
-    toHTML() {
+    getHTML() {
+        return "";
+    }
+
+    getGLSL() {
         return "";
     }
 
@@ -23,8 +27,12 @@ export class Number extends ASTNode {
         super(+value);
     }
 
-    toHTML() {
+    getHTML() {
         return String(this.value);
+    }
+
+    getGLSL() {
+        return this.value.toExponential();
     }
 
     multiply(factor) {
@@ -53,8 +61,12 @@ export class Variable extends ASTNode {
         super(name);
     }
 
-    toHTML() {
+    getHTML() {
         return String(this.value);
+    }
+
+    getGLSL() {
+        return this.value;
     }
 
     multiply(factor) {
@@ -77,8 +89,12 @@ export class Function extends ASTNode {
         super(name, left, right);
     }
 
-    toHTML() {
-        return String(this.value) + "(" + this.left.toHTML() + ")";
+    getHTML() {
+        return this.value + "(" + this.left.getHTML() + ")";
+    }
+
+    getGLSL() {
+        return this.value + "(" + this.left.getGLSL() + ")";
     }
 }
 
@@ -111,15 +127,15 @@ export class BinaryOperator extends ASTNode {
         return precedence[this.value];
     }
 
-    toHTML() {
-        console.assert(this.left.toHTML && this.right.toHTML, this);
+    getHTML() {
+        console.assert(this.left.getHTML && this.right.getHTML, this);
 
-        let leftSubExpression = this.left.toHTML();
+        let leftSubExpression = this.left.getHTML();
         if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
             leftSubExpression = "(" + leftSubExpression + ")";
         }
 
-        let rightSubExpression = this.right.toHTML();
+        let rightSubExpression = this.right.getHTML();
         if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
             rightSubExpression = "(" + rightSubExpression + ")";
         }
@@ -143,6 +159,25 @@ export class BinaryOperator extends ASTNode {
                 }
             }
 
+            return leftSubExpression + separator + rightSubExpression;
+        }
+    }
+
+    getGLSL() {
+        let leftSubExpression = this.left.getGLSL();
+        if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
+            leftSubExpression = "(" + leftSubExpression + ")";
+        }
+
+        let rightSubExpression = this.right.getGLSL();
+        if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
+            rightSubExpression = "(" + rightSubExpression + ")";
+        }
+
+        if (this.value === '^') {
+            return "pow(" + leftSubExpression + ", " + rightSubExpression + ")";
+        } else {
+            let separator = ' ' + this.value + ' ';
             return leftSubExpression + separator + rightSubExpression;
         }
     }
@@ -263,8 +298,12 @@ export class Ratio extends BinaryOperator {
         return 3;
     }
 
-    toHTML() {
-        return "<div class='ratio'><span>" + this.left.toHTML() + "</span><span>" + this.right.toHTML() + "</span></div>";
+    getHTML() {
+        return "<div class='ratio'><span>" + this.left.getHTML() + "</span><span>" + this.right.getHTML() + "</span></div>";
+    }
+
+    getGLSL() {
+        return this.left.getGLSL() + " / " + this.right.getGLSL();
     }
 
     simplify(parent, isRight) {

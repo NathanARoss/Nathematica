@@ -3,17 +3,17 @@ import { Mat4, Vec4 } from "./matrix-math.mjs";
 const scaledTexturedVsSource =
     `attribute vec4 aPosition;
 uniform mat4 uMVPMatrix;
-varying mediump vec2 vTexCoord;
+varying mediump vec2 vPosition;
 void main(void) {
     gl_Position = uMVPMatrix * aPosition;
-    vTexCoord = aPosition.xy;
+    vPosition = aPosition.xy;
 }`;
 
 let texturedFsSource =
-    `varying mediump vec2 vTexCoord;
+    `varying mediump vec2 vPosition;
 uniform sampler2D uSampler;
 void main(void) {
-    gl_FragColor = texture2D(uSampler, vTexCoord);
+    gl_FragColor = texture2D(uSampler, vPosition);
 }`;
 
 const viewMatrix = new Mat4();
@@ -31,7 +31,7 @@ const gl = canvas.getContext("webgl", {
 
 let shaderProgram = initShaderProgram(gl, scaledTexturedVsSource, texturedFsSource);
 
-const programInfo = {
+let programInfo = {
     program: shaderProgram,
     attribLocations: {
         position: gl.getAttribLocation(shaderProgram, 'aPosition'),
@@ -46,9 +46,8 @@ const backgroundModel = initTexturedBox(gl, 0, 0, 255, 255);
 
 loadTexture(gl, "gridcell.png");
 
-const DEFAULT_CAMERA_DISTANCE = 1;
-const camera = [0, 0, 1];
-let cameraZoomOut = 1;
+let cameraZoomOut = 5;
+const camera = [0, 0, Math.pow(2, cameraZoomOut / 4)];
 
 
 gl.clearColor(0.53, 0.81, 0.92, 1);
@@ -222,9 +221,8 @@ document.onwheel = function (event) {
         --cameraZoomOut;
     }
 
-    const scale = Math.pow(2, cameraZoomOut / 4);
-    camera[2] = DEFAULT_CAMERA_DISTANCE * scale;
-    console.log("camera distance", (scale * 100).toFixed(1), "%");
+    camera[2] = Math.pow(2, cameraZoomOut / 4);
+    console.log("camera distance", (camera[2] * 100).toFixed(1), "%");
 }
 
 let downX, downY, isCursorDown, cameraDownX, cameraDownY;
@@ -274,12 +272,33 @@ function initTexturedBox(gl) {
 }
 
 export function drawGraph(equationForY) {
+    equationForY = equationForY.replace("x", "vPosition.x");
+
     let texturedFsSource =
-        `varying mediump vec2 vTexCoord;
+        `varying mediump vec2 vPosition;
     uniform sampler2D uSampler;
     void main(void) {
-    gl_FragColor = texture2D(uSampler, vTexCoord);
+        mediump float ${equationForY};
+
+        lowp vec4 color = texture2D(uSampler, vPosition);
+        if (abs(vPosition.y - y) < 0.25) {
+            color = vec4(0, 0, 0, 1);
+        }
+        gl_FragColor = color;
     }`;
 
+    console.log(texturedFsSource);
+
     shaderProgram = initShaderProgram(gl, scaledTexturedVsSource, texturedFsSource);
+
+    programInfo = {
+        program: shaderProgram,
+        attribLocations: {
+            position: gl.getAttribLocation(shaderProgram, 'aPosition'),
+        },
+        uniformLocations: {
+            mvpMatrix: gl.getUniformLocation(shaderProgram, 'uMVPMatrix'),
+            uSampler: gl.getUniformLocation(shaderProgram, 'uSampler'),
+        },
+    };
 }

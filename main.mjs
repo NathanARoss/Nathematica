@@ -1,5 +1,6 @@
 import * as ItemTypes from "./item-types.mjs";
 import { } from "./2d-graph.mjs";
+import { drawGraph } from "./2d-graph.mjs";
 
 const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
@@ -15,8 +16,13 @@ queryForm.addEventListener("submit", function (event) {
     const ast = getAST(query);
     // console.dir(ast);
 
-    const out = ast.toHTML();
+    const out = ast.getHTML();
     inputInterpretation.innerHTML = out;
+
+    const glslExpression = ast.getGLSL();
+
+    // drawGraph("y = pow(x, 2.0) + 1.0");
+    drawGraph(glslExpression);
 
     solutionSteps.innerHTML = "";
 
@@ -25,7 +31,7 @@ queryForm.addEventListener("submit", function (event) {
     let keepGoing = true;
     for (let i = 0; keepGoing && i < 10; ++i) {
         const step = document.createElement("div");
-        step.innerHTML = fakeNode.left.toHTML();
+        step.innerHTML = fakeNode.left.getHTML();
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
 
