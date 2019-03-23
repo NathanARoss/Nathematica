@@ -312,7 +312,7 @@ export class Ratio extends BinaryOperator {
     }
 
     getGLSL() {
-        return this.left.getGLSL() + " / " + this.right.getGLSL();
+        return "(" + this.left.getGLSL() + ") / (" + this.right.getGLSL() + ")";
     }
 
     simplify(parent, isRight) {
