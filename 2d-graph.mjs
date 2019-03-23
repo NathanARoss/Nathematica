@@ -285,22 +285,29 @@ function initTexturedBox(gl) {
 }
 
 export function drawGraph(equationForY) {
-    equationForY = equationForY.replace("x", "vPosition.x");
-
     let texturedFsSource =
         `varying mediump vec2 vPosition;
     uniform sampler2D uSampler;
-    void main(void) {
-        mediump float ${equationForY};
 
+    mediump float getY(float x) {
+        mediump float ${equationForY};
+        return y;
+    }
+
+    void main(void) {
         lowp vec4 color = texture2D(uSampler, vPosition);
         if (abs(vPosition.x) < 1.0/16.0 || abs(vPosition.y) < 1.0/16.0) {
             color = vec4(0, 0, 0, 1);
         }
 
-        if (abs(vPosition.y - y) < 0.125) {
+        mediump float leftDiff = getY(vPosition.x - 0.125) - vPosition.y;
+        mediump float diff = getY(vPosition.x) - vPosition.y;
+        mediump float rightDIff = getY(vPosition.x + 0.125) - vPosition.y;
+
+        if (abs(diff) < 0.125 || sign(leftDiff) != sign(rightDIff)) {
             color = vec4(0, 0, 1, 1);
         }
+
         gl_FragColor = color;
     }`;
 
