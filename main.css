@@ -26,9 +26,29 @@ fieldset {
 
 #input-interpretation {
     padding: 10px;
+    display: inline-flex;
+    align-items: center;
+}
+
+#input-interpretation span {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    white-space: pre;
 }
 
 .superscript {
-    vertical-align: super;
     font-size: smaller;
-  }
+    margin-bottom: 7px;
+}
+
+.ratio {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin: 0 4px;
+}
+
+.ratio > span:nth-child(1) {
+    border-bottom: solid black thin;
+}

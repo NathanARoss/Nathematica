@@ -79,6 +79,8 @@ export class BinaryOperator {
 
         if (this.op === '^') {
             return this.left.toHTML() + "<span class='superscript'>" + this.right.toHTML() + "</span>";
+        } if (this.op === '/') {
+            return "<div class='ratio'><span>" + this.left.toHTML() + "</span><span>" + this.right.toHTML() + "</span></div>";
         } else {
             let separator = ' ' + this.op + ' ';
 
