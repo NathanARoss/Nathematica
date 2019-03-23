@@ -128,7 +128,7 @@ export class BinaryOperator extends ASTNode {
     }
 
     getHTML() {
-        console.assert(this.left.getHTML && this.right.getHTML, this);
+        console.assert(this.left && this.right && this.left.getHTML && this.right.getHTML, this);
 
         let leftSubExpression = this.left.getHTML();
         if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
@@ -183,6 +183,55 @@ export class BinaryOperator extends ASTNode {
     }
 
     simplify(parent, isRight) {
+        //distribute across expressions when simplifying numbers isn't possible
+        console.log(this.value, this.left, this.right, this.left instanceof Ratio, this.right instanceof Ratio);
+        if (this.value === '*') {
+            console.log("trying again to solve multiplication")
+            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                console.log("attempting to multiply fractions")
+                const numerator = new BinaryOperator('*', this.left.left, this.right.left);
+                const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                const newNode = new Ratio(numerator, denominator);
+
+                console.log(numerator, denominator);
+                if (isRight) {
+                    parent.right = newNode;
+                } else {
+                    parent.left = newNode;
+                }
+
+                return true;
+            } else if (
+                !(this.left instanceof Number) && (this.right instanceof Number) ||
+                this.left instanceof Variable && this.right instanceof Variable ||
+                (this.left instanceof BinaryOperator && this.left.value !== '*')
+                || (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
+                this.left = this.left.multiply(this.right);
+
+                if (isRight) {
+                    parent.right = this.left;
+                } else {
+                    parent.left = this.left;
+                }
+
+                return true;
+            }
+        } else if (this.value === '+') {
+            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                const numerator = new BinaryOperator('+', new BinaryOperator('*', this.left.left, this.right.right), new BinaryOperator('*', this.right.left, this.left.right));
+                const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                const newNode = new Ratio(numerator, denominator);
+
+                if (isRight) {
+                    parent.right = newNode;
+                } else {
+                    parent.left = newNode;
+                }
+
+                return true;
+            }
+        }
+
         let simplified = this.left.simplify(this, false);
 
         if (!simplified) {
@@ -219,27 +268,6 @@ export class BinaryOperator extends ASTNode {
                 }
 
                 return true;
-            } else {
-                //distribute across expressions when simplifying numbers isn't possible
-                if (this.value === '*') {
-                    // console.log(this.value, this.left, this.right);
-                    if (
-                        !(this.left instanceof Number) && (this.right instanceof Number) ||
-                        this.left instanceof Variable && this.right instanceof Variable ||
-                        (this.left instanceof BinaryOperator && this.left.value !== '*')
-                        || (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
-                        this.left = this.left.multiply(this.right);
-
-                        if (isRight) {
-                            parent.right = this.left;
-                        } else {
-                            parent.left = this.left;
-                        }
-
-                        return true;
-                    }
-
-                }
             }
         }
 

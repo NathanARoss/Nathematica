@@ -19,7 +19,10 @@ queryForm.addEventListener("submit", function (event) {
     const out = ast.getHTML();
     inputInterpretation.innerHTML = out;
 
-    const glslExpression = ast.getGLSL();
+    let glslExpression = ast.getGLSL();
+    if (!glslExpression.includes("=")) {
+        glslExpression = "y = " + glslExpression;
+    }
 
     // drawGraph("y = pow(x, 2.0) + 1.0");
     drawGraph(glslExpression);

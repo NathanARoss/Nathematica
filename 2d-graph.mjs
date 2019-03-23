@@ -13,7 +13,11 @@ let texturedFsSource =
     `varying mediump vec2 vPosition;
 uniform sampler2D uSampler;
 void main(void) {
-    gl_FragColor = texture2D(uSampler, vPosition);
+    lowp vec4 color = texture2D(uSampler, vPosition);
+    if (abs(vPosition.x) < 1.0/16.0 || abs(vPosition.y) < 1.0/16.0) {
+        color = vec4(0, 0, 0, 1);
+    }
+    gl_FragColor = color;
 }`;
 
 const viewMatrix = new Mat4();
@@ -155,6 +159,7 @@ function drawScene(timestamp) {
 
 
 
+let mouseInside;
 {
     canvas.touchId = -1;
 
@@ -179,6 +184,11 @@ function drawScene(timestamp) {
             onpointerup();
         }
         this.down = false;
+        mouseInside = false;
+    };
+
+    canvas.onmouseenter = function (event) {
+        mouseInside = true;
     };
 
     canvas.addEventListener("touchstart", function (event) {
@@ -215,14 +225,15 @@ function drawScene(timestamp) {
 }
 
 document.onwheel = function (event) {
-    if (event.deltaY > 0) {
-        ++cameraZoomOut;
-    } else {
-        --cameraZoomOut;
-    }
+    if (mouseInside) {
+        if (event.deltaY > 0) {
+            ++cameraZoomOut;
+        } else {
+            --cameraZoomOut;
+        }
 
-    camera[2] = Math.pow(2, cameraZoomOut / 4);
-    console.log("camera distance", (camera[2] * 100).toFixed(1), "%");
+        camera[2] = Math.pow(2, cameraZoomOut / 4);
+    }
 }
 
 let downX, downY, isCursorDown, cameraDownX, cameraDownY;
@@ -281,8 +292,12 @@ export function drawGraph(equationForY) {
         mediump float ${equationForY};
 
         lowp vec4 color = texture2D(uSampler, vPosition);
-        if (abs(vPosition.y - y) < 0.25) {
+        if (abs(vPosition.x) < 1.0/16.0 || abs(vPosition.y) < 1.0/16.0) {
             color = vec4(0, 0, 0, 1);
+        }
+
+        if (abs(vPosition.y - y) < 0.125) {
+            color = vec4(0, 0, 1, 1);
         }
         gl_FragColor = color;
     }`;
