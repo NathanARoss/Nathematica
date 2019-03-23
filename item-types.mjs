@@ -5,10 +5,6 @@ export class ASTNode {
         this.right = right;
     }
 
-    sort() {
-
-    }
-
     getHTML() {
         return "";
     }
@@ -103,21 +99,9 @@ export class BinaryOperator extends ASTNode {
         super(op, left, right);
     }
 
-    sort() {
-        //sort the left and right hand side so literals prefer being on the left
-        if (this.value === '*' && !(this.left instanceof Number) && this.right instanceof Number) {
-            const temp = this.left;
-            this.left = this.right;
-            this.right = temp;
-        }
-
-        this.left.sort();
-        this.right.sort();
-    }
-
     precedence() {
         var precedence = {
-            "^": 4,
+            "^": 5,
             "*": 3,
             "+": 2,
             "-": 2,
@@ -184,11 +168,8 @@ export class BinaryOperator extends ASTNode {
 
     simplify(parent, isRight) {
         //distribute across expressions when simplifying numbers isn't possible
-        console.log(this.value, this.left, this.right, this.left instanceof Ratio, this.right instanceof Ratio);
         if (this.value === '*') {
-            console.log("trying again to solve multiplication")
             if (this.left instanceof Ratio && this.right instanceof Ratio) {
-                console.log("attempting to multiply fractions")
                 const numerator = new BinaryOperator('*', this.left.left, this.right.left);
                 const denominator = new BinaryOperator('*', this.left.right, this.right.right);
                 const newNode = new Ratio(numerator, denominator);
@@ -323,7 +304,7 @@ export class Ratio extends BinaryOperator {
     }
 
     precedence() {
-        return 3;
+        return 4;
     }
 
     getHTML() {
@@ -353,7 +334,7 @@ export class Ratio extends BinaryOperator {
                 } else if (left === Math.floor(left) && right === Math.floor(right)) {
                     const gdc = getGCD(this.left.value, this.right.value);
                     if (gdc > 1) {
-                        newNode = new BinaryOperator('/', new Number(left / gdc), new Number(right / gdc));
+                        newNode = new Ratio(new Number(left / gdc), new Number(right / gdc));
                     } else {
                         return false;
                     }

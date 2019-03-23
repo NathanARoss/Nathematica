@@ -226,6 +226,8 @@ let mouseInside;
 
 document.onwheel = function (event) {
     if (mouseInside) {
+        event.preventDefault();
+
         if (event.deltaY > 0) {
             ++cameraZoomOut;
         } else {
