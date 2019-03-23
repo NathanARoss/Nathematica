@@ -12,6 +12,7 @@
 
 #query-bar > input[type="text"] {
     flex-grow: 1;
+    padding: 16px;
 }
 
 #query-bar > input[type="submit"] {
@@ -24,17 +25,21 @@ fieldset {
     margin: 20px 0;
 }
 
-#input-interpretation {
+.formula-display {
     padding: 10px;
-    display: inline-flex;
+    display: flex;
     align-items: center;
+    white-space: pre;
 }
 
-#input-interpretation span {
+#solution-steps > .formula-display:not(:last-child) {
+    border-bottom: solid darkgray thin;
+}
+
+.formula-display span {
     display: flex;
     justify-content: center;
     align-items: center;
-    white-space: pre;
 }
 
 .superscript {

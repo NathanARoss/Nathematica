@@ -3,6 +3,7 @@ import * as ItemTypes from "./item-types.mjs";
 const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
 const inputInterpretation = document.getElementById("input-interpretation");
+const solutionSteps = document.getElementById("solution-steps");
 
 
 
@@ -11,10 +12,22 @@ queryForm.addEventListener("submit", function (event) {
 
     const query = queryInput.value;
     const ast = getAST(query);
-    console.dir(ast);
+    // console.dir(ast);
 
     const out = ast.toHTML();
     inputInterpretation.innerHTML = out;
+
+    solutionSteps.innerHTML = "";
+
+    let notFinished = true;
+    for (let i = 0; notFinished && i < 10; ++i) {
+        notFinished = ast.simplify();
+        const step = document.createElement("div");
+        step.innerHTML = ast.toHTML();
+        step.classList.add("formula-display");
+        solutionSteps.appendChild(step);
+    }
+
     return false;
 });
 
@@ -115,7 +128,6 @@ function getAST(expressionString) {
 
     const ast = expression.pop();
     console.assert(expression.length === 0, "expression should have no more entries", ...expression);
-    ast.sort();
 
     return ast;
 }
