@@ -1,5 +1,4 @@
 import * as ItemTypes from "./item-types.mjs";
-import { } from "./2d-graph.mjs";
 import { drawGraph } from "./2d-graph.mjs";
 
 const queryForm = document.getElementById("query-bar");
