@@ -50,7 +50,7 @@ const backgroundModel = initTexturedBox(gl, 0, 0, 255, 255);
 
 loadTexture(gl, "gridcell.png");
 
-let cameraZoomOut = 5;
+let cameraZoomOut = 8;
 const camera = [0, 0, Math.pow(2, cameraZoomOut / 4)];
 
 
