@@ -1,5 +1,7 @@
 import * as ItemTypes from "./item-types.mjs";
-import { drawGraph } from "./2d-graph.mjs";
+import {
+    drawGraph
+} from "./2d-graph.mjs";
 
 const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
@@ -20,11 +22,6 @@ queryForm.addEventListener("submit", function (event) {
 
     try {
         let glslExpression = ast.getGLSL();
-        if (!glslExpression.includes("=")) {
-            glslExpression = "y = " + glslExpression;
-        }
-
-        // drawGraph("y = pow(x, 2.0) + 1.0");
         drawGraph(glslExpression);
     } catch (e) {
         console.error(e);

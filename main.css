@@ -1,3 +1,10 @@
+form,
+fieldset {
+    width: 100%;
+    margin: 8px 0;
+    box-sizing: border-box;
+}
+
 #query-bar {
     display: flex;
     width: 100%;
@@ -5,24 +12,19 @@
     box-sizing: border-box;
 }
 
-#query-bar > * {
+#query-bar>* {
     height: 100%;
     box-sizing: border-box;
 }
 
-#query-bar > input[type="text"] {
+#query-bar>input[type="text"] {
     flex-grow: 1;
     padding: 16px;
 }
 
-#query-bar > input[type="submit"] {
+#query-bar>input[type="submit"] {
     flex-grow: 0;
     flex-shrink: 0;
-}
-
-fieldset {
-    padding: 5px;
-    margin: 20px 0;
 }
 
 .formula-display {
@@ -32,7 +34,7 @@ fieldset {
     white-space: pre;
 }
 
-#solution-steps > .formula-display:not(:last-child) {
+#solution-steps>.formula-display:not(:last-child) {
     border-bottom: solid darkgray thin;
 }
 
@@ -54,11 +56,11 @@ fieldset {
     margin: 0 4px;
 }
 
-.ratio > span:nth-child(1) {
+.ratio>span:nth-child(1) {
     border-bottom: solid black thin;
 }
 
 canvas {
     width: 100%;
-    position: relative;
+    height: calc(100vh - 100px);
 }
