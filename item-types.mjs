@@ -169,15 +169,21 @@ export class BinaryOperator extends ASTNode {
                 let expression = "";
 
                 const power = this.right.value;
-                const evenPower = Math.floor(power / 2) * 2;
 
-                if (evenPower !== 0) {
-                    expression = "pow(abs(" + leftSubExpression + "), " + evenPower + ".0)";
+                if (power <= 6) {
+                    expression = new Array(power).fill(leftSubExpression).join('*');
+                } else {
+                    const evenPower = Math.floor(power / 2) * 2;
+
+                    if (evenPower !== 0) {
+                        expression = "pow(abs(" + leftSubExpression + "), " + evenPower + ".0)";
+                    }
+
+                    if (evenPower !== power) {
+                        expression += " * " + leftSubExpression;
+                    }
                 }
 
-                if (evenPower !== power) {
-                    expression += " * " + leftSubExpression;
-                }
 
                 return expression;
             } else {
