@@ -27,8 +27,16 @@ queryForm.addEventListener("submit", function (event) {
             //query has both sides of an equal sign
             glslExpression = ast.right.getGLSL() + " - (" + ast.left.getGLSL() + ")";
         } else {
-            //only one side is written, so I assume the "y = " part is implied
-            glslExpression = ast.getGLSL() + " - y";
+            //only one side is written, so I make a guess at the missing half
+            glslExpression = ast.getGLSL();
+
+            if (query.includes('x') && query.includes('y')) {
+                glslExpression += " - 1.0";
+            } else if (query.includes('x')) {
+                glslExpression += " - y";
+            } else {
+                glslExpression += " - x";
+            }
         }
 
         drawGraph(glslExpression);
