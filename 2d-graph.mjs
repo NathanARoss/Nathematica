@@ -241,7 +241,7 @@ function initTexturedBox(gl) {
     };
 }
 
-export function drawGraph(equationForY) {
+export function drawGraph(expression) {
     const vertexShaderSource =
         `uniform mediump vec2 uScale;
     uniform mediump vec2 uOffset;
@@ -259,8 +259,8 @@ export function drawGraph(equationForY) {
     uniform mediump float uWidth;
     varying mediump vec2 vPosition;
 
-    mediump float getY(float x) {
-        return ${equationForY};
+    mediump float getSample(float x, float y) {
+        return ${expression};
     }
 
     void main(void) {
@@ -270,18 +270,19 @@ export function drawGraph(equationForY) {
             color = vec4(0, 0, 0, 1);
         }
 
-        mediump float leftDiff = getY(vPosition.x - uWidth) - vPosition.y;
-        mediump float diff = getY(vPosition.x) - vPosition.y;
-        mediump float rightDIff = getY(vPosition.x + uWidth) - vPosition.y;
+        mediump float leftSample = getSample(vPosition.x - uWidth, vPosition.y);
+        mediump float rightSample = getSample(vPosition.x + uWidth, vPosition.y);
+        mediump float downSample = getSample(vPosition.x, vPosition.y - uWidth);
+        mediump float upSample = getSample(vPosition.x, vPosition.y + uWidth);
 
-        if (abs(diff) < uWidth || leftDiff * rightDIff < 0.0) {
+        if (leftSample * rightSample < 0.0 || downSample * upSample < 0.0) {
             color = vec4(0, 0, 1, 1);
         }
 
         gl_FragColor = color;
     }`;
 
-    console.log(fragmentShaderSource);
+    console.log(expression);
 
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
     gl.useProgram(shaderProgram);
@@ -302,7 +303,7 @@ export function drawGraph(equationForY) {
     gl.uniform2f(programInfo.uniformLocations.uOffset, cameraX, cameraY);
     document.body.onresize();
 }
-drawGraph("x");
+drawGraph("pow(abs(x), 2.0) * x - 2.0 * x + 1.0 - (pow(abs(y), 2.0))");
 
 function updateCameraScale(zoomOut, aspectRatio) {
     const scale = getScale(zoomOut);

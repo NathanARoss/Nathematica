@@ -21,7 +21,16 @@ queryForm.addEventListener("submit", function (event) {
     inputInterpretation.innerHTML = out;
 
     try {
-        let glslExpression = ast.getGLSL();
+        let glslExpression;
+
+        if (ast instanceof ItemTypes.BinaryOperator && ast.value === '=') {
+            //query has both sides of an equal sign
+            glslExpression = ast.right.getGLSL() + " - (" + ast.left.getGLSL() + ")";
+        } else {
+            //only one side is written, so I assume the "y = " part is implied
+            glslExpression = ast.getGLSL() + " - y";
+        }
+
         drawGraph(glslExpression);
     } catch (e) {
         console.error(e);
