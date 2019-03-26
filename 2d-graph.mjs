@@ -200,8 +200,8 @@ const onpointerdown = (x, y) => {
 const onpointermove = (x, y) => {
     if (isCursorDown) {
         const scale = getScale(zoomOut) * 2;
-        cameraX = -(x - downX) / canvas.width * scale * aspectRatio + cameraDownX;
-        cameraY = (y - downY) / canvas.height * scale + cameraDownY;
+        cameraX = -(x - downX) / canvas.clientWidth * scale * aspectRatio + cameraDownX;
+        cameraY = (y - downY) / canvas.clientHeight * scale + cameraDownY;
         gl.uniform2f(programInfo.uniformLocations.uOffset, cameraX, cameraY);
         requestAnimationFrame(drawScene);
     }
