@@ -13,7 +13,7 @@ const backgroundModel = initTexturedBox(gl, 0, 0, 255, 255);
 
 loadTexture(gl, "gridcell.png");
 
-let zoomOut = 0;
+let zoomOut = 8;
 let aspectRatio = 1;
 let cameraX = 0;
 let cameraY = 0;
@@ -315,5 +315,5 @@ function updateCameraScale(zoomOut, aspectRatio) {
 }
 
 function getScale(zoomOut) {
-    return Math.pow(1.25, zoomOut);
+    return Math.pow(2 ** 0.25, zoomOut);
 }
