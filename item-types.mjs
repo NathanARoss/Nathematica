@@ -28,7 +28,12 @@ export class Number extends ASTNode {
     }
 
     getGLSL() {
-        return this.value.toExponential();
+        let out = this.value.toFixed();
+        if (!out.includes('.') && !out.includes('e')) {
+            out += ".0";
+        }
+
+        return out;
     }
 
     multiply(factor) {
@@ -68,7 +73,7 @@ export class Variable extends ASTNode {
     multiply(factor) {
         if (factor instanceof Variable && this.value === factor.value) {
             return new BinaryOperator('^', this, new Number('2'));
-        } if (factor instanceof Number && factor.value === 1) {
+        } else if (factor instanceof Number && factor.value === 1) {
             return this;
         } else {
             return new BinaryOperator('*', factor, this);
@@ -159,7 +164,26 @@ export class BinaryOperator extends ASTNode {
         }
 
         if (this.value === '^') {
-            return "pow(" + leftSubExpression + ", " + rightSubExpression + ")";
+            if (this.right instanceof Number && Math.floor(this.right.value) === this.right.value) {
+                //the power is an integer, attempt to preserve properties of integer powers of odd bases
+                let expression = "";
+
+                const power = this.right.value;
+                const evenPower = Math.floor(power / 2) * 2;
+
+                if (evenPower !== 0) {
+                    expression = "pow(abs(" + leftSubExpression + "), " + evenPower + ".0)";
+                }
+
+                if (evenPower !== power) {
+                    expression += " * " + leftSubExpression;
+                }
+
+                return expression;
+            } else {
+                //glsl's pow function is undefined for negative bases
+                return "pow(abs(" + leftSubExpression + "), " + rightSubExpression + ")";
+            }
         } else {
             let separator = ' ' + this.value + ' ';
             return leftSubExpression + separator + rightSubExpression;
@@ -185,8 +209,8 @@ export class BinaryOperator extends ASTNode {
             } else if (
                 !(this.left instanceof Number) && (this.right instanceof Number) ||
                 this.left instanceof Variable && this.right instanceof Variable ||
-                (this.left instanceof BinaryOperator && this.left.value !== '*')
-                || (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
+                (this.left instanceof BinaryOperator && this.left.value !== '*') ||
+                (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
                 this.left = this.left.multiply(this.right);
 
                 if (isRight) {
