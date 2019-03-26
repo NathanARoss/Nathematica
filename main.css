@@ -64,3 +64,15 @@ canvas {
     width: 100%;
     height: calc(100vh - 100px);
 }
+
+#zoom-controls {
+    display: flex;
+    height: 40px;
+}
+
+#zoom-controls>button {
+    flex-grow: 1;
+    height: 100%;
+    font-size: 30px;
+    background: none;
+}

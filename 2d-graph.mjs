@@ -18,6 +18,15 @@ let aspectRatio = 1;
 let cameraX = 0;
 let cameraY = 0;
 
+document.getElementById("zoom-in").addEventListener("click", function (event) {
+    zoomOut -= 1;
+    updateCameraScale(zoomOut, aspectRatio);
+});
+document.getElementById("zoom-out").addEventListener("click", function (event) {
+    zoomOut += 1;
+    updateCameraScale(zoomOut, aspectRatio);
+});
+
 document.body.onresize = function () {
     canvas.width = canvas.clientWidth * window.devicePixelRatio;
     canvas.height = canvas.clientHeight * window.devicePixelRatio;
