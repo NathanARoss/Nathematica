@@ -54,7 +54,7 @@ queryForm.addEventListener("submit", function (event) {
 });
 
 function getAST(expressionString) {
-    const tokens = expressionString.match(/\d+[.]?\d*|\d*[.]?\d+|cos|sin|tan|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
+    const tokens = expressionString.match(/\d+[.]?\d*|\d*[.]?\d+|cos|sin|tan|abs|floor|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
 
     if (!tokens || tokens.length === 0) {
         return false;
@@ -106,13 +106,13 @@ function getAST(expressionString) {
         const token = tokens[i];
 
         //detect implicit multiplication
-        if (/\d+|cos|sin|tan|theta|pi|[a-zπΠΘθ]/i.test(token)) {
-            if (i > 0 && /\d+|cos|sin|tan|theta|pi|[a-zπΠΘθ]/i.test(tokens[i - 1])) {
+        if (/\d+|cos|sin|tan|abs|floor|theta|pi|[a-zπΠΘθ]/i.test(token)) {
+            if (i > 0 && /\d+|theta|pi|[a-zπΠΘθ]/i.test(tokens[i - 1])) {
                 handleOperator('*');
             }
         }
 
-        if (/cos|sin|tan/i.test(token)) {
+        if (/cos|sin|tan|abs|floor/i.test(token)) {
             opStack.push(new ItemTypes.Function(token));
         } else if (/\d+|theta|pi|[a-zπΠΘθ]/i.test(token)) {
             if (/\d+/.test(token)) {
