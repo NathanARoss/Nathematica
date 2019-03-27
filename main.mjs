@@ -32,10 +32,10 @@ queryForm.addEventListener("submit", function (event) {
 
             if (query.includes('x') && query.includes('y')) {
                 glslExpression += " - 1.0";
-            } else if (query.includes('x')) {
-                glslExpression += " - y";
-            } else {
+            } else if (query.includes('y')) {
                 glslExpression += " - x";
+            } else {
+                glslExpression += " - y";
             }
         }
 

@@ -164,10 +164,10 @@ export class BinaryOperator extends ASTNode {
         }
 
         if (this.value === '^') {
+            let expression = "";
+
             if (this.right instanceof Number && Math.floor(this.right.value) === this.right.value) {
                 //the power is an integer, attempt to preserve properties of integer powers of odd bases
-                let expression = "";
-
                 const power = this.right.value;
 
                 if (power <= 6) {
@@ -183,13 +183,12 @@ export class BinaryOperator extends ASTNode {
                         expression += " * " + leftSubExpression;
                     }
                 }
-
-
-                return expression;
             } else {
                 //glsl's pow function is undefined for negative bases
-                return "pow(abs(" + leftSubExpression + "), " + rightSubExpression + ")";
+                expression = "pow(abs(" + leftSubExpression + "), " + rightSubExpression + ")";
             }
+
+            return expression;
         } else {
             let separator = ' ' + this.value + ' ';
             return leftSubExpression + separator + rightSubExpression;
