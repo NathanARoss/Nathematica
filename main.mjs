@@ -56,16 +56,21 @@ function processQuery(query) {
 
     solutionSteps.innerHTML = "";
 
-    const fakeNode = new ItemTypes.ASTNode(null, ast, null);
+    let previousHTML = "";
+    let simplifiedAst = ast;
 
-    let keepGoing = true;
-    for (let i = 0; keepGoing && i < 10; ++i) {
+    for (let i = 0; i < 10; ++i) {
+        const html = simplifiedAst.getHTML();
+        if (html === previousHTML) {
+            break;
+        }
+        previousHTML = html;
+        simplifiedAst = simplifiedAst.simplify();
+
         const step = document.createElement("div");
-        step.innerHTML = fakeNode.left.getHTML();
+        step.innerHTML = html;
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
-
-        keepGoing = fakeNode.left.simplify(fakeNode, false);
     }
 }
 
