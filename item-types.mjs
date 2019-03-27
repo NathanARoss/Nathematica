@@ -183,6 +183,8 @@ export class BinaryOperator extends ASTNode {
                         expression += " * " + leftSubExpression;
                     }
                 }
+
+
             } else {
                 //glsl's pow function is undefined for negative bases
                 expression = "pow(abs(" + leftSubExpression + "), " + rightSubExpression + ")";
@@ -196,57 +198,8 @@ export class BinaryOperator extends ASTNode {
     }
 
     simplify(parent, isRight) {
-        //distribute across expressions when simplifying numbers isn't possible
-        if (this.value === '*') {
-            if (this.left instanceof Ratio && this.right instanceof Ratio) {
-                const numerator = new BinaryOperator('*', this.left.left, this.right.left);
-                const denominator = new BinaryOperator('*', this.left.right, this.right.right);
-                const newNode = new Ratio(numerator, denominator);
-
-                console.log(numerator, denominator);
-                if (isRight) {
-                    parent.right = newNode;
-                } else {
-                    parent.left = newNode;
-                }
-
-                return true;
-            } else if (
-                !(this.left instanceof Number) && (this.right instanceof Number) ||
-                this.left instanceof Variable && this.right instanceof Variable ||
-                (this.left instanceof BinaryOperator && this.left.value !== '*') ||
-                (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
-                this.left = this.left.multiply(this.right);
-
-                if (isRight) {
-                    parent.right = this.left;
-                } else {
-                    parent.left = this.left;
-                }
-
-                return true;
-            }
-        } else if (this.value === '+') {
-            if (this.left instanceof Ratio && this.right instanceof Ratio) {
-                const numerator = new BinaryOperator('+', new BinaryOperator('*', this.left.left, this.right.right), new BinaryOperator('*', this.right.left, this.left.right));
-                const denominator = new BinaryOperator('*', this.left.right, this.right.right);
-                const newNode = new Ratio(numerator, denominator);
-
-                if (isRight) {
-                    parent.right = newNode;
-                } else {
-                    parent.left = newNode;
-                }
-
-                return true;
-            }
-        }
-
         let simplified = this.left.simplify(this, false);
-
-        if (!simplified) {
-            simplified = this.right.simplify(this, true);
-        }
+        simplified = this.right.simplify(this, true) || simplified;
 
         if (!simplified) {
             const left = this.left.value;
@@ -278,6 +231,54 @@ export class BinaryOperator extends ASTNode {
                 }
 
                 return true;
+            }
+
+            //distribute across expressions when simplifying numbers isn't possible
+            if (this.value === '*') {
+                if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                    const numerator = new BinaryOperator('*', this.left.left, this.right.left);
+                    const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                    const newNode = new Ratio(numerator, denominator);
+
+                    console.log(numerator, denominator);
+                    if (isRight) {
+                        parent.right = newNode;
+                    } else {
+                        parent.left = newNode;
+                    }
+
+                    return true;
+                } else if (
+                    !(this.left instanceof Number) && (this.right instanceof Number) ||
+                    this.left instanceof Variable && this.right instanceof Variable ||
+                    (this.left instanceof BinaryOperator && this.left.value !== '*') ||
+                    (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
+                    this.left = this.left.multiply(this.right);
+
+                    if (isRight) {
+                        parent.right = this.left;
+                    } else {
+                        parent.left = this.left;
+                    }
+
+                    return true;
+                }
+            }
+
+            if (this.value === '+') {
+                if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                    const numerator = new BinaryOperator('+', new BinaryOperator('*', this.left.left, this.right.right), new BinaryOperator('*', this.right.left, this.left.right));
+                    const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                    const newNode = new Ratio(numerator, denominator);
+
+                    if (isRight) {
+                        parent.right = newNode;
+                    } else {
+                        parent.left = newNode;
+                    }
+
+                    return true;
+                }
             }
         }
 
@@ -346,10 +347,7 @@ export class Ratio extends BinaryOperator {
 
     simplify(parent, isRight) {
         let simplified = this.left.simplify(this, false);
-
-        if (!simplified) {
-            simplified = this.right.simplify(this, true);
-        }
+        simplified = this.right.simplify(this, true) || simplified;
 
         if (!simplified) {
             if (this.left instanceof Number && this.right instanceof Number) {
