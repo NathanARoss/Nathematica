@@ -8,12 +8,22 @@ const queryInput = queryForm.querySelector("input[type='text']");
 const inputInterpretation = document.getElementById("input-interpretation");
 const solutionSteps = document.getElementById("solution-steps");
 
-
+setTimeout(function () {
+    if (queryInput.value) {
+        processQuery(queryInput.value)
+    }
+}, 0);
 
 queryForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
     const query = queryInput.value;
+    processQuery(query);
+
+    return false;
+});
+
+function processQuery(query) {
     const ast = getAST(query);
     // console.dir(ast);
 
@@ -57,9 +67,7 @@ queryForm.addEventListener("submit", function (event) {
 
         keepGoing = fakeNode.left.simplify(fakeNode, false);
     }
-
-    return false;
-});
+}
 
 function getAST(expressionString) {
     const tokens = expressionString.match(/\d+[.]?\d*|\d*[.]?\d+|cos|sin|tan|abs|floor|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
