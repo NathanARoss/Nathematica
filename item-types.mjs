@@ -16,6 +16,41 @@ export class ASTNode {
     simplify() {
         return false;
     }
+
+    isSymmetrical() {
+        return true;
+    }
+
+    static equal(a, b) {
+        if (a === b) {
+            return true;
+        }
+
+        if (a.value !== b.value) {
+            return false;
+        }
+
+        let leftSideEqual = ASTNode.equal(a.left, b.left);
+        let rightSideEqual = ASTNode.equal(a.right, b.right);
+
+        if (leftSideEqual && rightSideEqual) {
+            return true;
+        }
+
+        return false;
+    }
+
+    static mathematicallyEqual(a, b) {
+        if (ASTNode.equal(a, b)) {
+            return true;
+        }
+
+        if (a instanceof BinaryOperator && a.isSymmetrical() &&
+            ASTNode.equal(a.left, b.right) &&
+            ASTNode.equal(a.right, b.left)) {
+            return true;
+        }
+    }
 }
 
 export class Number extends ASTNode {
@@ -197,32 +232,48 @@ export class BinaryOperator extends ASTNode {
         }
     }
 
+    isSymmetrical() {
+        return this.value !== '-';
+    }
+
     simplify(parent, isRight) {
-        let simplified = this.left.simplify(this, false);
-        simplified = this.right.simplify(this, true) || simplified;
+        const left = this.left.value;
+        const right = this.right.value;
 
-        if (!simplified) {
-            const left = this.left.value;
-            const right = this.right.value;
+        if (this.left instanceof Number && this.right instanceof Number) {
+            let result = 0;
+            switch (this.value) {
+                case '+':
+                    result = left + right;
+                    break;
+                case '-':
+                    result = left - right;
+                    break;
+                case '*':
+                    result = left * right;
+                    break;
+                case '^':
+                    result = Math.pow(left, right);
+                    break;
+            }
 
-            if (this.left instanceof Number && this.right instanceof Number) {
-                let result = 0;
-                switch (this.value) {
-                    case '+':
-                        result = left + right;
-                        break;
-                    case '-':
-                        result = left - right;
-                        break;
-                    case '*':
-                        result = left * right;
-                        break;
-                    case '^':
-                        result = Math.pow(left, right);
-                        break;
-                }
+            const newNode = new Number(result);
 
-                const newNode = new Number(result);
+            if (isRight) {
+                parent.right = newNode;
+            } else {
+                parent.left = newNode;
+            }
+
+            return true;
+        }
+
+        //distribute across expressions when simplifying numbers isn't possible
+        if (this.value === '*') {
+            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                const numerator = new BinaryOperator('*', this.left.left, this.right.left);
+                const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                const newNode = new Ratio(numerator, denominator);
 
                 if (isRight) {
                     parent.right = newNode;
@@ -231,44 +282,30 @@ export class BinaryOperator extends ASTNode {
                 }
 
                 return true;
-            }
+            } else if (
+                !(this.left instanceof Number) && (this.right instanceof Number) ||
+                this.left instanceof Variable && this.right instanceof Variable ||
+                (this.left instanceof BinaryOperator && this.left.value !== '*') ||
+                (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
+                this.left = this.left.multiply(this.right);
 
-            //distribute across expressions when simplifying numbers isn't possible
-            if (this.value === '*') {
-                if (this.left instanceof Ratio && this.right instanceof Ratio) {
-                    const numerator = new BinaryOperator('*', this.left.left, this.right.left);
-                    const denominator = new BinaryOperator('*', this.left.right, this.right.right);
-                    const newNode = new Ratio(numerator, denominator);
-
-                    console.log(numerator, denominator);
-                    if (isRight) {
-                        parent.right = newNode;
-                    } else {
-                        parent.left = newNode;
-                    }
-
-                    return true;
-                } else if (
-                    !(this.left instanceof Number) && (this.right instanceof Number) ||
-                    this.left instanceof Variable && this.right instanceof Variable ||
-                    (this.left instanceof BinaryOperator && this.left.value !== '*') ||
-                    (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
-                    this.left = this.left.multiply(this.right);
-
-                    if (isRight) {
-                        parent.right = this.left;
-                    } else {
-                        parent.left = this.left;
-                    }
-
-                    return true;
+                if (isRight) {
+                    parent.right = this.left;
+                } else {
+                    parent.left = this.left;
                 }
-            }
 
-            if (this.value === '+') {
-                if (this.left instanceof Ratio && this.right instanceof Ratio) {
-                    const numerator = new BinaryOperator('+', new BinaryOperator('*', this.left.left, this.right.right), new BinaryOperator('*', this.right.left, this.left.right));
-                    const denominator = new BinaryOperator('*', this.left.right, this.right.right);
+                return true;
+            }
+        }
+
+        if (this.value === '+') {
+            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+                if (ASTNode.equal(this.left.right, this.right.right)) {
+                    //both sides have the same demoninator (after simplification)
+                    const numerator = new BinaryOperator('+', this.left.left, this.right.left);
+                    const denominator = this.left.right;
+
                     const newNode = new Ratio(numerator, denominator);
 
                     if (isRight) {
@@ -276,11 +313,25 @@ export class BinaryOperator extends ASTNode {
                     } else {
                         parent.left = newNode;
                     }
+
+                    return true;
+                } else if (!ASTNode.mathematicallyEqual(this.left.right, this.right.right)) {
+                    //both sides have denominators of differing value, so multiply to find the common denominator
+                    this.left.left = new BinaryOperator('*', this.left.left, this.right.right);
+                    this.right.left = new BinaryOperator('*', this.right.left, this.left.right);
+
+                    const leftDenominator = new BinaryOperator('*', this.left.right, this.right.right);
+                    const rightDenominator = new BinaryOperator('*', this.right.right, this.left.right);
+                    this.left.right = leftDenominator;
+                    this.right.right = rightDenominator;
 
                     return true;
                 }
             }
         }
+
+        let simplified = this.left.simplify(this, false);
+        simplified = this.right.simplify(this, true) || simplified;
 
         return simplified;
     }
@@ -345,39 +396,41 @@ export class Ratio extends BinaryOperator {
         return "(" + this.left.getGLSL() + ") / (" + this.right.getGLSL() + ")";
     }
 
+    isSymmetrical() {
+        return false;
+    }
+
     simplify(parent, isRight) {
-        let simplified = this.left.simplify(this, false);
-        simplified = this.right.simplify(this, true) || simplified;
+        if (this.left instanceof Number && this.right instanceof Number) {
+            let newNode;
 
-        if (!simplified) {
-            if (this.left instanceof Number && this.right instanceof Number) {
-                let newNode;
+            const left = this.left.value;
+            const right = this.right.value;
 
-                const left = this.left.value;
-                const right = this.right.value;
-
-                if (right === 1) {
-                    newNode = new Number(left);
-                } else if (left === Math.floor(left) && right === Math.floor(right)) {
-                    const gdc = getGCD(this.left.value, this.right.value);
-                    if (gdc > 1) {
-                        newNode = new Ratio(new Number(left / gdc), new Number(right / gdc));
-                    } else {
-                        return false;
-                    }
+            if (right === 1) {
+                newNode = new Number(left);
+            } else if (left === Math.floor(left) && right === Math.floor(right)) {
+                const gdc = getGCD(this.left.value, this.right.value);
+                if (gdc > 1) {
+                    newNode = new Ratio(new Number(left / gdc), new Number(right / gdc));
                 } else {
                     return false;
                 }
-
-                if (isRight) {
-                    parent.right = newNode;
-                } else {
-                    parent.left = newNode;
-                }
-
-                return true;
+            } else {
+                return false;
             }
+
+            if (isRight) {
+                parent.right = newNode;
+            } else {
+                parent.left = newNode;
+            }
+
+            return true;
         }
+
+        let simplified = this.left.simplify(this, false);
+        simplified = this.right.simplify(this, true) || simplified;
 
         return simplified;
     }
