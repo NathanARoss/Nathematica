@@ -252,10 +252,11 @@ function initTexturedBox(gl) {
 
 export function drawGraph(expression) {
     const vertexShaderSource =
-        `uniform mediump vec2 uScale;
-    uniform mediump vec2 uOffset;
-    attribute mediump vec4 aPosition;
-    varying mediump vec2 vPosition;
+        `precision mediump float;
+    uniform vec2 uScale;
+    uniform vec2 uOffset;
+    attribute vec4 aPosition;
+    varying vec2 vPosition;
 
     void main(void) {
         gl_Position = aPosition;
@@ -264,25 +265,26 @@ export function drawGraph(expression) {
     }`;
 
     const fragmentShaderSource =
-        `uniform sampler2D uSampler;
-    uniform mediump float uWidth;
-    varying mediump vec2 vPosition;
+        `precision mediump float;
+    uniform sampler2D uSampler;
+    uniform float uWidth;
+    varying vec2 vPosition;
 
-    mediump float getSample(float x, float y) {
+    float getSample(float x, float y) {
         return ${expression};
     }
 
     void main(void) {
         lowp vec4 color = texture2D(uSampler, vPosition);
-        mediump float axisWidth = max(1.0/32.0, uWidth);
+        float axisWidth = max(1.0/32.0, uWidth);
         if (abs(vPosition.x) < axisWidth || abs(vPosition.y) < axisWidth) {
             color = vec4(0, 0, 0, 1);
         }
 
-        mediump float leftSample = getSample(vPosition.x - uWidth, vPosition.y);
-        mediump float rightSample = getSample(vPosition.x + uWidth, vPosition.y);
-        mediump float downSample = getSample(vPosition.x, vPosition.y - uWidth);
-        mediump float upSample = getSample(vPosition.x, vPosition.y + uWidth);
+        float leftSample = getSample(vPosition.x - uWidth, vPosition.y);
+        float rightSample = getSample(vPosition.x + uWidth, vPosition.y);
+        float downSample = getSample(vPosition.x, vPosition.y - uWidth);
+        float upSample = getSample(vPosition.x, vPosition.y + uWidth);
 
         if (leftSample * rightSample < 0.0 || downSample * upSample < 0.0) {
             color = vec4(0, 0, 1, 1);
