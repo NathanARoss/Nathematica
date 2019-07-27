@@ -7,36 +7,32 @@ const gl = canvas.getContext("webgl", {
     stencil: false,
 });
 
-let programInfo = {};
+let programInfo = null;
 
 const backgroundModel = initTexturedBox(gl, 0, 0, 255, 255);
 
 loadTexture(gl, "gridcell.png");
 
-let zoomOut = 8;
+let zoomFactor = 8;
 let aspectRatio = 1;
 let cameraX = 0;
 let cameraY = 0;
 
-document.getElementById("zoom-in").addEventListener("click", function (event) {
-    zoomOut -= 1;
-    updateCameraScale(zoomOut, aspectRatio);
-});
-document.getElementById("zoom-out").addEventListener("click", function (event) {
-    zoomOut += 1;
-    updateCameraScale(zoomOut, aspectRatio);
-});
-
 document.body.onresize = function () {
-    canvas.width = canvas.clientWidth * window.devicePixelRatio;
-    canvas.height = canvas.clientHeight * window.devicePixelRatio;
+    if (programInfo) {
+        //when document resizes, assume the canvas will also resize
+        //when the canvas resizes, set the canvas' resolution equal to the resolution the canvas takes on screen
+        canvas.width = canvas.clientWidth * window.devicePixelRatio;
+        canvas.height = canvas.clientHeight * window.devicePixelRatio;
+        gl.viewport(0, 0, canvas.width, canvas.height);
 
-    gl.viewport(0, 0, canvas.width, canvas.height);
+        //also keep track of the aspect ratio changes
+        aspectRatio = canvas.clientWidth / canvas.clientHeight;
+        updateCameraScale(zoomFactor, aspectRatio);
 
-    aspectRatio = canvas.clientWidth / canvas.clientHeight;
-    updateCameraScale(zoomOut, aspectRatio);
-
-    requestAnimationFrame(drawScene);
+        //the canvas' content is outdated, so request a new frame to render
+        requestAnimationFrame(drawScene);
+    }
 };
 
 
@@ -90,14 +86,18 @@ function loadTexture(gl, url) {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR_MIPMAP_LINEAR);
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
 
-        requestAnimationFrame(drawScene);
+        if (programInfo) {
+            requestAnimationFrame(drawScene);
+        }
     };
 
     image.onerror = function () {
         const pixel = new Uint8Array([0, 255, 255]);
         gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, 1, 1, 0, gl.RGB, gl.UNSIGNED_BYTE, pixel);
 
-        requestAnimationFrame(drawScene);
+        if (programInfo) {
+            requestAnimationFrame(drawScene);
+        }
     }
 
     return texture;
@@ -119,8 +119,9 @@ function drawScene(timestamp) {
 
 
 
-let mouseInside; {
-    canvas.touchId = -1;
+let mouseInside;
+{
+    let touchId = -1;
 
     canvas.onmousedown = function (event) {
         onpointerdown(event.x, event.y);
@@ -151,9 +152,9 @@ let mouseInside; {
     };
 
     canvas.addEventListener("touchstart", function (event) {
-        if (this.touchId === -1) {
+        if (touchId === -1) {
             const touch = event.changedTouches[0];
-            this.touchId = touch.identifier;
+            touchId = touch.identifier;
             onpointerdown(touch.pageX, touch.pageY);
         }
     });
@@ -162,7 +163,7 @@ let mouseInside; {
         event.preventDefault();
 
         for (const touch of event.changedTouches) {
-            if (touch.identifier === this.touchId) {
+            if (touch.identifier === touchId) {
                 switch (event.type) {
                     case "touchmove":
                         onpointermove(touch.pageX, touch.pageY);
@@ -171,7 +172,7 @@ let mouseInside; {
                     case "touchend":
                     case "touchcancel":
                         onpointerup();
-                        this.touchId = -1;
+                        touchId = -1;
                         break;
                 }
             }
@@ -188,12 +189,12 @@ document.onwheel = function (event) {
         event.preventDefault();
 
         if (event.deltaY > 0) {
-            ++zoomOut;
+            ++zoomFactor;
         } else {
-            --zoomOut;
+            --zoomFactor;
         }
 
-        updateCameraScale(zoomOut, aspectRatio);
+        updateCameraScale(zoomFactor, aspectRatio);
     }
 }
 
@@ -208,7 +209,7 @@ const onpointerdown = (x, y) => {
 
 const onpointermove = (x, y) => {
     if (isCursorDown) {
-        const scale = getScale(zoomOut) * 2;
+        const scale = getScale(zoomFactor) * 2;
         cameraX = -(x - downX) / canvas.clientWidth * scale * aspectRatio + cameraDownX;
         cameraY = (y - downY) / canvas.clientHeight * scale + cameraDownY;
         gl.uniform2f(programInfo.uniformLocations.uOffset, cameraX, cameraY);
@@ -250,7 +251,7 @@ function initTexturedBox(gl) {
     };
 }
 
-export function drawGraph(expression) {
+export function enableGraph(expression) {
     const vertexShaderSource =
         `precision mediump float;
     uniform vec2 uScale;
@@ -312,9 +313,17 @@ export function drawGraph(expression) {
     };
 
     gl.uniform2f(programInfo.uniformLocations.uOffset, cameraX, cameraY);
+
+    canvas.style.display = "";
     document.body.onresize();
 }
-drawGraph("pow(abs(x), 2.0) * x - 2.0 * x + 1.0 - (pow(abs(y), 2.0))");
+
+export function disableGraph() {
+    canvas.style.display = "none";
+    programInfo = null;
+    mouseInside = false;
+}
+disableGraph();
 
 function updateCameraScale(zoomOut, aspectRatio) {
     const scale = getScale(zoomOut);

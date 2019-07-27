@@ -1,6 +1,7 @@
 import * as ItemTypes from "./item-types.mjs";
 import {
-    drawGraph
+    enableGraph,
+    disableGraph
 } from "./2d-graph.mjs";
 
 const queryForm = document.getElementById("query-bar");
@@ -25,35 +26,42 @@ queryForm.addEventListener("submit", function (event) {
 
 function processQuery(query) {
     const ast = getAST(query);
-    // console.dir(ast);
+    console.dir(ast);
 
     const out = ast.getHTML();
     inputInterpretation.innerHTML = out;
 
-    try {
-        let glslExpression;
+    if (query.includes('x') || query.includes('y')) {
+        try {
+            let glslExpression;
 
-        if (ast instanceof ItemTypes.BinaryOperator && ast.value === '=') {
-            //query has both sides of an equal sign
-            glslExpression = ast.right.getGLSL() + " - (" + ast.left.getGLSL() + ")";
-        } else {
-            //only one side is written, so I make a guess at the missing half
-            glslExpression = ast.getGLSL();
-
-            if (query.includes('x') && query.includes('y')) {
-                glslExpression += " - 1.0";
-            } else if (query.includes('y')) {
-                glslExpression += " - x";
+            if (ast instanceof ItemTypes.BinaryOperator && ast.value === '=') {
+                //query has both sides of an equal sign
+                glslExpression = ast.right.getGLSL() + " - (" + ast.left.getGLSL() + ")";
             } else {
-                glslExpression += " - y";
-            }
-        }
+                //only one side is written, so I make a guess at the missing half
+                glslExpression = ast.getGLSL();
 
-        drawGraph(glslExpression);
-    } catch (e) {
-        console.error(e);
+                if (query.includes('x') && query.includes('y')) {
+                    glslExpression += " - 1.0";
+                } else if (query.includes('y')) {
+                    glslExpression += " - x";
+                } else {
+                    glslExpression += " - y";
+                }
+            }
+
+            enableGraph(glslExpression);
+        } catch (e) {
+            console.error(e);
+        }
+    }
+    else {
+        disableGraph();
     }
 
+    //simplify the expression and print each step of the simplification
+    //stop when the resulting expression is the same as the previous step
     solutionSteps.innerHTML = "";
 
     let previousHTML = "";
