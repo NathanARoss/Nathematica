@@ -88,7 +88,7 @@ function processQuery(query) {
         }
 
         const step = document.createElement("div");
-        step.innerHTML = simplifiedAst.getTreeHTML();
+        step.innerHTML = simplifiedAst.getHTML();
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
 
@@ -98,12 +98,12 @@ function processQuery(query) {
 
     //don't show the solution box if there is no solution,
     //solution cannot be found (likely due to lack of implementation),
-    //or the input is already in its simpliest form
-    // if (solutionSteps.childNodes.length <= 1 || failedToSolve) {
-    //     solutionContainer.style.display = "none";
-    // } else {
-    solutionContainer.style.display = "";
-    // }
+    // or the input is already in its simpliest form
+    if (solutionSteps.childNodes.length <= 1 || failedToSolve) {
+        solutionContainer.style.display = "none";
+    } else {
+        solutionContainer.style.display = "";
+    }
 }
 
 function getAST(expressionString) {
