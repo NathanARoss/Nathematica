@@ -121,7 +121,7 @@ function drawScene(timestamp) {
 
 let mouseInside;
 {
-    let touchId = -1;
+    const activeTouches = [];
 
     canvas.onmousedown = function (event) {
         onpointerdown(event.x, event.y);
@@ -152,10 +152,16 @@ let mouseInside;
     };
 
     canvas.addEventListener("touchstart", function (event) {
-        if (touchId === -1) {
-            const touch = event.changedTouches[0];
-            touchId = touch.identifier;
-            onpointerdown(touch.pageX, touch.pageY);
+        for (const touch of event.changedTouches) {
+            activeTouches.push({
+                identifier: touch.identifier,
+                prevX: touch.pageX,
+                prevY: touch.pageY,
+            });
+
+            if (activeTouches.length === 1) {
+                onpointerdown(touch.pageX, touch.pageY);
+            }
         }
     });
 
@@ -163,18 +169,29 @@ let mouseInside;
         event.preventDefault();
 
         for (const touch of event.changedTouches) {
-            if (touch.identifier === touchId) {
-                switch (event.type) {
-                    case "touchmove":
+            const index = activeTouches.findIndex(x => x.identifier === touch.identifier);
+            switch (event.type) {
+                case "touchmove":
+                    if (index === 0) {
                         onpointermove(touch.pageX, touch.pageY);
-                        break;
+                    }
+                    activeTouches[index].prevX = touch.pageX;
+                    activeTouches[index].prevY = touch.pageY;
+                    break;
 
-                    case "touchend":
-                    case "touchcancel":
+                case "touchend":
+                case "touchcancel":
+                    //remove the touch from the list of tracked touches
+                    activeTouches.splice(index, 1);
+
+                    if (activeTouches.length === 0) {
+                        //if no touches remain, act as if the mouse released
                         onpointerup();
-                        touchId = -1;
-                        break;
-                }
+                    } else {
+                        //otherwise, treat the next touch as if it was the mouse
+                        onpointerdown(activeTouches[0].prevX, activeTouches[0].prevY);
+                    }
+                    break;
             }
         }
     }
@@ -294,7 +311,7 @@ export function enableGraph(expression) {
         gl_FragColor = color;
     }`;
 
-    console.log(expression);
+    // console.log(expression);
 
     const shaderProgram = initShaderProgram(gl, vertexShaderSource, fragmentShaderSource);
     gl.useProgram(shaderProgram);
