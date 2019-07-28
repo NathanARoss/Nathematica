@@ -13,6 +13,14 @@ const solutionContainer = document.getElementById("solution-container");
 const graphEquationContainer = document.getElementById("graph-equation-container");
 
 setTimeout(function () {
+    if (!queryInput.value && window.location.search !== "") {
+        let query = decodeURIComponent(window.location.search);
+        if (query.startsWith("?")) {
+            query = query.substr(1);
+        }
+        queryInput.value = query;
+    }
+
     if (queryInput.value) {
         processQuery(queryInput.value)
     }
@@ -21,7 +29,10 @@ setTimeout(function () {
 queryForm.addEventListener("submit", function (event) {
     event.preventDefault();
 
-    const query = queryInput.value;
+    //ignore whitespace in query
+    const query = queryInput.value.replace(/\s/g, '');
+
+    window.location.search = encodeURIComponent(query);
     processQuery(query);
 
     return false;
