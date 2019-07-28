@@ -8,6 +8,7 @@ const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
 const inputInterpretation = document.getElementById("input-interpretation");
 const solutionSteps = document.getElementById("solution-steps");
+const solutionContainer = document.getElementById("solution-container");
 
 setTimeout(function () {
     if (queryInput.value) {
@@ -66,12 +67,19 @@ function processQuery(query) {
 
     let previousHTML = "";
     let simplifiedAst = ast;
+    let failedToSolve = false;
 
-    for (let i = 0; i < 10; ++i) {
+    for (let i = 0; ; ++i) {
         const html = simplifiedAst.getHTML();
         if (html === previousHTML) {
             break;
         }
+
+        if (i > 10) {
+            failedToSolve = true;
+            break;
+        }
+
         previousHTML = html;
         simplifiedAst = simplifiedAst.simplify();
 
@@ -79,6 +87,15 @@ function processQuery(query) {
         step.innerHTML = html;
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
+    }
+
+    //don't show the solution box if there is no solution,
+    //solution cannot be found (likely due to lack of implementation),
+    //or the input is already in its simpliest form
+    if (solutionSteps.childNodes.length <= 1 || failedToSolve) {
+        solutionContainer.style.display = "none";
+    } else {
+        solutionContainer.style.display = "";
     }
 }
 
