@@ -10,6 +10,7 @@ const inputInterpretation = document.getElementById("input-interpretation");
 const graphEquation = document.getElementById("graph-equation");
 const solutionSteps = document.getElementById("solution-steps");
 const solutionContainer = document.getElementById("solution-container");
+const graphEquationContainer = document.getElementById("graph-equation-container");
 
 setTimeout(function () {
     if (queryInput.value) {
@@ -52,10 +53,10 @@ function processQuery(query) {
 
             glslExpression = graphableAst.right.getGLSL() + " - (" + graphableAst.left.getGLSL() + ")";
             if (graphableAst === ast) {
-                graphEquation.style.display = "none";
+                graphEquationContainer.style.display = "none";
             } else {
                 graphEquation.innerHTML = graphableAst.getHTML();
-                graphEquation.style.display = "";
+                graphEquationContainer.style.display = "";
             }
             enableGraph(glslExpression);
         } catch (e) {
