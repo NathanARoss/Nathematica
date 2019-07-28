@@ -7,6 +7,7 @@ import {
 const queryForm = document.getElementById("query-bar");
 const queryInput = queryForm.querySelector("input[type='text']");
 const inputInterpretation = document.getElementById("input-interpretation");
+const graphEquation = document.getElementById("graph-equation");
 const solutionSteps = document.getElementById("solution-steps");
 const solutionContainer = document.getElementById("solution-container");
 
@@ -27,7 +28,7 @@ queryForm.addEventListener("submit", function (event) {
 
 function processQuery(query) {
     const ast = getAST(query);
-    console.dir(ast);
+    // console.dir(ast);
 
     const out = ast.getHTML();
     inputInterpretation.innerHTML = out;
@@ -35,23 +36,27 @@ function processQuery(query) {
     if (query.includes('x') || query.includes('y')) {
         try {
             let glslExpression;
+            let graphableAst = ast;
 
-            if (ast instanceof ItemTypes.BinaryOperator && ast.value === '=') {
-                //query has both sides of an equal sign
-                glslExpression = ast.right.getGLSL() + " - (" + ast.left.getGLSL() + ")";
-            } else {
+            if (!(ast instanceof ItemTypes.BinaryOperator && ast.value === '=')) {
                 //only one side is written, so I make a guess at the missing half
-                glslExpression = ast.getGLSL();
 
                 if (query.includes('x') && query.includes('y')) {
-                    glslExpression += " - 1.0";
+                    graphableAst = new ItemTypes.BinaryOperator("=", ast, new ItemTypes.Number(1.0));
                 } else if (query.includes('y')) {
-                    glslExpression += " - x";
+                    graphableAst = new ItemTypes.BinaryOperator("=", new ItemTypes.Variable("x"), ast);
                 } else {
-                    glslExpression += " - y";
+                    graphableAst = new ItemTypes.BinaryOperator("=", new ItemTypes.Variable("y"), ast);
                 }
             }
 
+            glslExpression = graphableAst.right.getGLSL() + " - (" + graphableAst.left.getGLSL() + ")";
+            if (graphableAst === ast) {
+                graphEquation.style.display = "none";
+            } else {
+                graphEquation.innerHTML = graphableAst.getHTML();
+                graphEquation.style.display = "";
+            }
             enableGraph(glslExpression);
         } catch (e) {
             console.error(e);
@@ -103,7 +108,7 @@ function getAST(expressionString) {
     const tokens = expressionString.match(/\d+[.]?\d*|\d*[.]?\d+|cos|sin|tan|abs|floor|theta|pi|[a-zπΠΘθ]|[-=+*^\\/()]/gi);
 
     if (!tokens || tokens.length === 0) {
-        return false;
+        return new ItemTypes.ASTNode();
     }
 
     const expression = [];
