@@ -5,6 +5,10 @@ export class ASTNode {
         this.right = right;
     }
 
+    getTreeHTML() {
+        return this.getHTML();
+    }
+
     getHTML() {
         return "";
     }
@@ -125,6 +129,10 @@ export class Function extends ASTNode {
         super(name, left, right);
     }
 
+    getTreeHTML() {
+        return this.value + "<span class='leaf'>" + this.left.getHTML() + "</span>";
+    }
+
     getHTML() {
         return this.value + "(" + this.left.getHTML() + ")";
     }
@@ -149,6 +157,12 @@ export class BinaryOperator extends ASTNode {
         };
 
         return precedence[this.value];
+    }
+
+    getTreeHTML() {
+        console.assert(this.left && this.right && this.left.getHTML && this.right.getHTML, this);
+
+        return "<span class='leaf'>" + this.left.getTreeHTML() + "</span>" + this.value + "<span class='leaf'>" + this.right.getTreeHTML() + "</span>";
     }
 
     getHTML() {

@@ -66,6 +66,17 @@ canvas {
     margin-bottom: 7px;
 }
 
+.leaf {
+    padding: 1px;
+    font-size: smaller;
+    margin-top: 15px;
+    border: solid thin gray;
+}
+
+.leaf>* {
+    display: inline-block;
+}
+
 .ratio {
     display: inline-flex;
     flex-direction: column;

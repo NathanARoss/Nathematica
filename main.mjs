@@ -65,6 +65,7 @@ function processQuery(query) {
     }
     else {
         disableGraph();
+        graphEquationContainer.style.display = "none";
     }
 
     //simplify the expression and print each step of the simplification
@@ -86,23 +87,23 @@ function processQuery(query) {
             break;
         }
 
-        previousHTML = html;
-        simplifiedAst = simplifiedAst.simplify();
-
         const step = document.createElement("div");
-        step.innerHTML = html;
+        step.innerHTML = simplifiedAst.getTreeHTML();
         step.classList.add("formula-display");
         solutionSteps.appendChild(step);
+
+        previousHTML = html;
+        simplifiedAst = simplifiedAst.simplify();
     }
 
     //don't show the solution box if there is no solution,
     //solution cannot be found (likely due to lack of implementation),
     //or the input is already in its simpliest form
-    if (solutionSteps.childNodes.length <= 1 || failedToSolve) {
-        solutionContainer.style.display = "none";
-    } else {
-        solutionContainer.style.display = "";
-    }
+    // if (solutionSteps.childNodes.length <= 1 || failedToSolve) {
+    //     solutionContainer.style.display = "none";
+    // } else {
+    solutionContainer.style.display = "";
+    // }
 }
 
 function getAST(expressionString) {
