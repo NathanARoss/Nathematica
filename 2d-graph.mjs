@@ -329,7 +329,7 @@ function updateCameraScale(zoomOut, aspectRatio) {
     const scale = getScale(zoomOut);
     gl.uniform2f(programInfo.uniformLocations.uScale, scale * aspectRatio, scale);
 
-    const width = scale / 128;
+    const width = scale / canvas.clientHeight * 4;
     gl.uniform1f(programInfo.uniformLocations.uWidth, width);
 
     requestAnimationFrame(drawScene);
