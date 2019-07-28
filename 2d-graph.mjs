@@ -1,3 +1,7 @@
+const debugOutput = document.getElementById("debug");
+const fullscreenToggle = document.getElementById("fullscreen-toggle");
+const graphContainer = document.getElementById("graph-container");
+
 const canvas = document.querySelector("canvas");
 const gl = canvas.getContext("webgl", {
     alpha: false,
@@ -175,8 +179,24 @@ let mouseInside;
                     if (index === 0) {
                         onpointermove(touch.pageX, touch.pageY);
                     }
-                    activeTouches[index].prevX = touch.pageX;
-                    activeTouches[index].prevY = touch.pageY;
+
+                    const thisTouch = activeTouches[index];
+
+                    //handle pinch to zoom - needs improvement
+                    if (activeTouches.length === 2) {
+                        const otherTouch = activeTouches[1 - index];
+                        const oldDistance = Math.hypot(thisTouch.prevX - otherTouch.prevX, thisTouch.prevY - otherTouch.prevY);
+                        const newDistance = Math.hypot(touch.pageX - otherTouch.prevX, touch.pageY - otherTouch.prevY);
+
+                        let debugText = "zoom delta: " + (newDistance - oldDistance).toFixed(2) + "\n";
+                        debugText += "clientHeight: " + canvas.clientHeight;
+                        debugOutput.innerHTML = debugText;
+                        zoomFactor -= (newDistance - oldDistance) / 32;
+                        updateCameraScale(zoomFactor, aspectRatio);
+                    }
+
+                    thisTouch.prevX = touch.pageX;
+                    thisTouch.prevY = touch.pageY;
                     break;
 
                 case "touchend":
@@ -270,7 +290,7 @@ function initTexturedBox(gl) {
 
 export function enableGraph(expression) {
     const vertexShaderSource =
-        `precision mediump float;
+        `precision highp float;
     uniform vec2 uScale;
     uniform vec2 uOffset;
     attribute vec4 aPosition;
@@ -283,7 +303,7 @@ export function enableGraph(expression) {
     }`;
 
     const fragmentShaderSource =
-        `precision mediump float;
+        `precision highp float;
     uniform sampler2D uSampler;
     uniform float uWidth;
     varying vec2 vPosition;
@@ -331,19 +351,19 @@ export function enableGraph(expression) {
 
     gl.uniform2f(programInfo.uniformLocations.uOffset, cameraX, cameraY);
 
-    canvas.style.display = "";
+    graphContainer.style.display = "";
     document.body.onresize();
 }
 
 export function disableGraph() {
-    canvas.style.display = "none";
+    graphContainer.style.display = "none";
     programInfo = null;
     mouseInside = false;
 }
 disableGraph();
 
-function updateCameraScale(zoomOut, aspectRatio) {
-    const scale = getScale(zoomOut);
+function updateCameraScale(factor, aspectRatio) {
+    const scale = getScale(factor);
     gl.uniform2f(programInfo.uniformLocations.uScale, scale * aspectRatio, scale);
 
     const width = scale / canvas.clientHeight * 4;
@@ -352,6 +372,12 @@ function updateCameraScale(zoomOut, aspectRatio) {
     requestAnimationFrame(drawScene);
 }
 
-function getScale(zoomOut) {
-    return Math.pow(2 ** 0.25, zoomOut);
+function getScale(factor) {
+    return Math.pow(2 ** 0.25, factor);
 }
+
+fullscreenToggle.addEventListener("click", function (event) {
+    graphContainer.classList.toggle("fullscreen");
+
+    setTimeout(document.body.onresize(), 1);
+});
