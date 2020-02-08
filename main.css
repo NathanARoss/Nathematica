@@ -133,9 +133,9 @@ canvas {
     display: inline-flex;
     flex-direction: column;
     align-items: stretch;
-    margin: 0 4px;
+    margin: 0 8px;
 }
 
-.ratio>span:nth-child(1) {
+.ratio>span:first-child {
     border-bottom: solid black thin;
 }
