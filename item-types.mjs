@@ -5,6 +5,7 @@ export class ASTNode {
         this.right = right;
     }
 
+    //generate a debug tree that makes the structure of the tree visible
     getTreeHTML() {
         return this.getHTML();
     }
@@ -30,6 +31,12 @@ export class ASTNode {
             return true;
         }
 
+        //check if either a or b is undefined, but not both
+        //this prevents the following if statements from throwing errors
+        if (!!a === !b) {
+            return false;
+        }
+
         if (a.value !== b.value) {
             return false;
         }
@@ -49,6 +56,8 @@ export class ASTNode {
             return true;
         }
 
+        //for symmetrical operators such as +, *, and =, check if swapping the left and right
+        //hand sides causes the terms to become equal
         if (a instanceof BinaryOperator && a.isSymmetrical() &&
             ASTNode.equal(a.left, b.right) &&
             ASTNode.equal(a.right, b.left)) {
@@ -57,7 +66,7 @@ export class ASTNode {
     }
 }
 
-export class Number extends ASTNode {
+export class NumericLiteral extends ASTNode {
     constructor(value) {
         super(+value);
     }
@@ -74,26 +83,6 @@ export class Number extends ASTNode {
 
         return out;
     }
-
-    multiply(factor) {
-        if (factor instanceof Number) {
-            this.value *= factor.value;
-            return this;
-        } else if (this.value === 1) {
-            return factor;
-        } else {
-            return new BinaryOperator('*', factor, this);
-        }
-    }
-
-    divide(factor) {
-        if (factor instanceof Number) {
-            this.value /= factor.value;
-            return this;
-        } else {
-            return new Ratio(this, factor);
-        }
-    }
 }
 
 export class Variable extends ASTNode {
@@ -107,20 +96,6 @@ export class Variable extends ASTNode {
 
     getGLSL() {
         return this.value;
-    }
-
-    multiply(factor) {
-        if (factor instanceof Variable && this.value === factor.value) {
-            return new BinaryOperator('^', this, new Number('2'));
-        } else if (factor instanceof Number && factor.value === 1) {
-            return this;
-        } else {
-            return new BinaryOperator('*', factor, this);
-        }
-    }
-
-    divide(factor) {
-        return new Ratio(this, factor);
     }
 }
 
@@ -150,6 +125,7 @@ export class BinaryOperator extends ASTNode {
     precedence() {
         var precedence = {
             "^": 5,
+            "/": 4,
             "*": 3,
             "+": 2,
             "-": 2,
@@ -169,18 +145,26 @@ export class BinaryOperator extends ASTNode {
         console.assert(this.left && this.right && this.left.getHTML && this.right.getHTML, this);
 
         let leftSubExpression = this.left.getHTML();
-        if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
-            leftSubExpression = "(" + leftSubExpression + ")";
+        let rightSubExpression = this.right.getHTML();
+
+        //divisions make their order of operations explicit by physically separating the numerator and denominator
+        if (this.value === '/') {
+            return "<div class='ratio'><span>" + leftSubExpression + "</span><span>" + rightSubExpression + "</span></div>";
         }
 
-        let rightSubExpression = this.right.getHTML();
-        if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
-            rightSubExpression = "(" + rightSubExpression + ")";
+        //for every other operator, parenthesis are necessary to indicate order
+        if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
+            leftSubExpression = "(" + leftSubExpression + ")";
         }
 
         if (this.value === '^') {
             return leftSubExpression + "<span class='superscript'>" + rightSubExpression + "</span>";
         } else {
+            //exponents physically separate the power, so no need to encapsulate the power in parenthesis
+            if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
+                rightSubExpression = "(" + rightSubExpression + ")";
+            }
+
             let separator = ' ' + this.value + ' ';
 
             if (this.value === "*") {
@@ -215,7 +199,7 @@ export class BinaryOperator extends ASTNode {
         if (this.value === '^') {
             let expression = "";
 
-            if (this.right instanceof Number && Math.floor(this.right.value) === this.right.value) {
+            if (this.right instanceof NumericLiteral && Math.floor(this.right.value) === this.right.value) {
                 //the power is an integer, attempt to preserve properties of integer powers of odd bases
                 const power = this.right.value;
 
@@ -247,11 +231,11 @@ export class BinaryOperator extends ASTNode {
     }
 
     isSymmetrical() {
-        return this.value !== '-';
+        return "+*=".includes(this.value);
     }
 
     simplify() {
-        if (this.left instanceof Number && this.right instanceof Number) {
+        if (this.left instanceof NumericLiteral && this.right instanceof NumericLiteral) {
             const left = this.left.value;
             const right = this.right.value;
 
@@ -266,37 +250,70 @@ export class BinaryOperator extends ASTNode {
                 case '*':
                     result = left * right;
                     break;
+                case '/':
+                    const numerator = left;
+                    const denominator = right;
+
+                    if (denominator === 1) {
+                        return this.left;
+                    }
+        
+                    //attempt to reduce fraction when both numerator and demoninator are integers
+                    if (numerator === Math.floor(numerator) && denominator === Math.floor(denominator)) {
+                        const gdc = getGCD(numerator, denominator);
+                        this.left.value /= gdc;
+                        this.right.value /= gdc;
+                    }
+
+                    return this;
                 case '^':
                     result = Math.pow(left, right);
                     break;
             }
 
-            return new Number(result);
+            return new NumericLiteral(result);
         }
 
-        //distribute across expressions when simplifying numbers isn't possible
-        if (this.value === '*') {
-            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+        //distribute across expressions when simplifying NumericLiterals isn't possible
+        else if (this.value === '*') {
+            if (this.left.value === 1) {
+                return this.right;
+            } else if (this.right.value === 1) {
+                return this.left;
+            } else if (this.left.value === '/' && this.right.value === '/') {
                 const numerator = new BinaryOperator('*', this.left.left, this.right.left);
                 const denominator = new BinaryOperator('*', this.left.right, this.right.right);
-                return new Ratio(numerator, denominator);
-            } else if (
-                !(this.left instanceof Number) && (this.right instanceof Number) ||
-                this.left instanceof Variable && this.right instanceof Variable ||
-                (this.left instanceof BinaryOperator && this.left.value !== '*') ||
-                (this.right instanceof BinaryOperator && this.right.value !== '*' && this.right.value !== '^')) {
-                return this.left.multiply(this.right);
+                return new BinaryOperator('/', numerator, denominator);
+            } else if (ASTNode.mathematicallyEqual(this.left, this.right)) {
+                if (this.right.value === '^') {
+                    return new BinaryOperator("*", new NumericLiteral('2'), this.right);
+                } else {
+                    // console.log(this)
+                    return new BinaryOperator('^', this.right, new NumericLiteral('2'));
+                }
+            } else if (this.left.value === '^') {
+                //detect cases like x^2 * x
+                if (ASTNode.mathematicallyEqual(this.left.left, this.right)) {
+                    this.left.right = new BinaryOperator('+', this.left.right, new NumericLiteral('1'));
+                    return this.left;
+                }
+            } else if (this.right.value === '^') {
+                //detect cases like x * x^2
+                if (ASTNode.mathematicallyEqual(this.right.left, this.left)) {
+                    this.right.right = new BinaryOperator('+', this.right.right, new NumericLiteral('1'));
+                    return this.right;
+                }
             }
         }
 
-        if (this.value === '+') {
-            if (this.left instanceof Ratio && this.right instanceof Ratio) {
+        else if (this.value === '+' || this.value === '-') {
+            if (this.left.value === '/' && this.right.value === '/') {
                 if (ASTNode.equal(this.left.right, this.right.right)) {
                     //both sides have the same demoninator (after simplification)
-                    const numerator = new BinaryOperator('+', this.left.left, this.right.left);
+                    const numerator = new BinaryOperator(this.value, this.left.left, this.right.left);
                     const denominator = this.left.right;
 
-                    return new Ratio(numerator, denominator);
+                    return new BinaryOperator('/', numerator, denominator);
                 } else if (!ASTNode.mathematicallyEqual(this.left.right, this.right.right)) {
                     //both sides have denominators of differing value, so multiply to find the common denominator
                     this.left.left = new BinaryOperator('*', this.left.left, this.right.right);
@@ -312,127 +329,32 @@ export class BinaryOperator extends ASTNode {
             }
         }
 
+        else if (this.value === '/') {
+            if (this.left.value === '/' && this.right.value === '/') {
+                //reciprocate the right hand side fraction and turn this into a multiplication
+                const temp = this.right.right;
+                this.right.right = this.right.left;
+                this.right.left = temp;
+
+                this.value = '*';
+                return this;
+            } else if (this.left.value === '/') {
+                //chains of divisions can be simplified by multiplying the demoninators together
+                this.left.right = new BinaryOperator('*', this.left.right, this.right);
+                return this.left;
+            }
+        }
+
+        //if no other explicit simplifications through replacement were made,
+        //then just try simplifying both halfs of the operator
         this.left = this.left.simplify();
         this.right = this.right.simplify();
 
         return this;
     }
-
-    multiply(factor) {
-        if (factor instanceof Number && factor.value === 1) {
-            return this;
-        }
-
-        switch (this.value) {
-            case '+':
-            case '-':
-                this.left = this.left.multiply(factor);
-                this.right = this.right.multiply(factor);
-                break;
-            case '*':
-                this.left = this.left.multiply(factor);
-                break;
-            case '^':
-                if (this.left instanceof Variable && factor instanceof Variable && this.left.value === factor.value) {
-                    this.right = new BinaryOperator('+', this.right, new Number('1'));
-                } else {
-                    return new BinaryOperator('*', factor, this);
-                }
-        }
-
-        return this;
-    }
-
-    divide(factor) {
-        switch (this.value) {
-            case '+':
-            case '-':
-                this.left = new Ratio(this.left, factor);
-                this.right = new Ratio(this.right, factor);
-                break;
-            case '*':
-                this.left = new Ratio(this.left, factor);
-                break;
-            case '^':
-                return new Ratio(this, factor);
-        }
-
-        return this;
-    }
 }
 
-export class Ratio extends BinaryOperator {
-    constructor(left, right) {
-        super('/', left, right);
-    }
-
-    precedence() {
-        return 4;
-    }
-
-    getHTML() {
-        return "<div class='ratio'><span>" + this.left.getHTML() + "</span><span>" + this.right.getHTML() + "</span></div>";
-    }
-
-    getGLSL() {
-        return "(" + this.left.getGLSL() + ") / (" + this.right.getGLSL() + ")";
-    }
-
-    isSymmetrical() {
-        return false;
-    }
-
-    simplify() {
-        if (this.left instanceof Number && this.right instanceof Number) {
-            const numerator = this.left.value;
-            const denominator = this.right.value;
-
-            if (denominator === 1) {
-                return new Number(numerator);
-            }
-
-            if (numerator === Math.floor(numerator) && denominator === Math.floor(denominator)) {
-                const gdc = getGCD(numerator, denominator);
-                this.left.value /= gdc;
-                this.right.value /= gdc;
-            }
-        } else {
-            this.left = this.left.simplify();
-            this.right = this.right.simplify();
-        }
-
-        return this;
-    }
-
-    multiply(factor) {
-        if (factor instanceof Number && factor.value === 1) {
-            return this;
-        }
-        this.left = this.left.multiply(factor);
-    }
-
-    divide(factor) {
-        this.right = this.right.multiply(factor);
-    }
-
-    multiplyAgainstRatio(ratio) {
-        this.left = this.left.multiply(ratio.left);
-        this.right = this.right.multiply(ratio.right);
-    }
-
-    reciprocal() {
-        const temp = this.left;
-        this.left = this.right;
-        this.right = temp;
-    }
-}
-
-export class Parenthesis extends ASTNode {
-    constructor(name) {
-        super(name);
-    }
-}
-
+//greatest common divisor to simplify fractions
 function getGCD(x, y) {
     x = Math.abs(x);
     y = Math.abs(y);
