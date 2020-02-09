@@ -51,7 +51,7 @@ export class ASTNode {
         return false;
     }
 
-    static mathematicallyEqual(a, b) {
+    static equivalent(a, b) {
         if (ASTNode.equal(a, b)) {
             return true;
         }
@@ -152,13 +152,16 @@ export class BinaryOperator extends ASTNode {
             return "<div class='ratio'><span>" + leftSubExpression + "</span><span>" + rightSubExpression + "</span></div>";
         }
 
+        //exponents are right associative, so a ^ on the right has a higher precedence than one on the left
+        const precedence = this.precedence() + (this.value === '^');
+
         //for every other operator, parenthesis are necessary to indicate order
-        if (this.left instanceof BinaryOperator && this.left.precedence() < this.precedence()) {
+        if (this.left instanceof BinaryOperator && this.left.precedence() < precedence) {
             leftSubExpression = "(" + leftSubExpression + ")";
         }
 
         if (this.value === '^') {
-            return leftSubExpression + "<span class='superscript'>" + rightSubExpression + "</span>";
+            return leftSubExpression + "<sup>" + rightSubExpression + "</sup>";
         } else {
             //exponents physically separate the power, so no need to encapsulate the power in parenthesis
             if (this.right instanceof BinaryOperator && this.right.precedence() < this.precedence()) {
@@ -284,7 +287,7 @@ export class BinaryOperator extends ASTNode {
                 const numerator = new BinaryOperator('*', this.left.left, this.right.left);
                 const denominator = new BinaryOperator('*', this.left.right, this.right.right);
                 return new BinaryOperator('/', numerator, denominator);
-            } else if (ASTNode.mathematicallyEqual(this.left, this.right)) {
+            } else if (ASTNode.equivalent(this.left, this.right)) {
                 if (this.right.value === '^') {
                     return new BinaryOperator("*", new NumericLiteral('2'), this.right);
                 } else {
@@ -293,13 +296,13 @@ export class BinaryOperator extends ASTNode {
                 }
             } else if (this.left.value === '^') {
                 //detect cases like x^2 * x
-                if (ASTNode.mathematicallyEqual(this.left.left, this.right)) {
+                if (ASTNode.equivalent(this.left.left, this.right)) {
                     this.left.right = new BinaryOperator('+', this.left.right, new NumericLiteral('1'));
                     return this.left;
                 }
             } else if (this.right.value === '^') {
                 //detect cases like x * x^2
-                if (ASTNode.mathematicallyEqual(this.right.left, this.left)) {
+                if (ASTNode.equivalent(this.right.left, this.left)) {
                     this.right.right = new BinaryOperator('+', this.right.right, new NumericLiteral('1'));
                     return this.right;
                 }
@@ -314,7 +317,7 @@ export class BinaryOperator extends ASTNode {
                     const denominator = this.left.right;
 
                     return new BinaryOperator('/', numerator, denominator);
-                } else if (!ASTNode.mathematicallyEqual(this.left.right, this.right.right)) {
+                } else if (!ASTNode.equivalent(this.left.right, this.right.right)) {
                     //both sides have denominators of differing value, so multiply to find the common denominator
                     this.left.left = new BinaryOperator('*', this.left.left, this.right.right);
                     this.right.left = new BinaryOperator('*', this.right.left, this.left.right);

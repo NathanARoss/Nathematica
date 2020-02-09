@@ -150,8 +150,9 @@ function getAST(expressionString) {
         let opPrecendence = item.precedence();
 
         if (op === '^') {
-            //exponents are processed right-to-left rather than left-to-right,
+            //exponents are right associative,
             //so prioritize this exponent over those earlier in the equation
+            //i.e. 2^2^3 is evaluated as 2^(2^3)
             ++opPrecendence;
         }
 

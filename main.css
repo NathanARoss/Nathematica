@@ -113,7 +113,7 @@ canvas {
     align-items: center;
 }
 
-.superscript {
+sup {
     font-size: smaller;
     margin-bottom: 7px;
 }
